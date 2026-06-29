@@ -6,6 +6,10 @@
 
 `open-termkit` is a local terminal environment built around wterm. It ships as a single Go binary that serves a static web UI, opens local PTY-backed shell sessions, stores profiles in SQLite, and manages setup presets for shells, SSH, tmux, and coding agents.
 
+## Keywords
+
+Local terminal, web terminal, PTY shell, developer tools, local-first CLI, SSH profile manager, tmux setup, React terminal UI, Go web app, SQLite profiles, WebSocket terminal, light theme, dark theme.
+
 ## Screenshots
 
 ### Light theme
