@@ -1,0 +1,11 @@
+.DS_Store
+bin/
+coverage.out
+node_modules/
+web/node_modules/
+web/dist/assets/
+web/dist/favicon.svg
+web/dist/vite.svg
+web/tsconfig.tsbuildinfo
+tmp/
+*.log
