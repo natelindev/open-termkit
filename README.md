@@ -8,7 +8,7 @@
 
 ## Keywords
 
-Local terminal, web terminal, PTY shell, developer tools, local-first CLI, SSH profile manager, tmux setup, React terminal UI, Go web app, SQLite profiles, WebSocket terminal, light theme, dark theme.
+Local terminal, web terminal, PTY shell, self-hosted developer tools, local-first CLI, SSH profile manager, tmux setup, React terminal UI, Go web app, SQLite profiles, WebSocket terminal, light theme, dark theme.
 
 ## Screenshots
 
