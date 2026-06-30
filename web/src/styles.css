@@ -438,8 +438,8 @@ nav::-webkit-scrollbar {
 
 .notice {
   position: fixed;
-  top: 80px;
   right: 24px;
+  bottom: 24px;
   z-index: 6;
   display: flex;
   align-items: center;
@@ -519,6 +519,52 @@ nav::-webkit-scrollbar {
   height: 100%;
   min-height: 0;
   margin: 0;
+}
+
+.terminal-control-bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+  border: 1px solid var(--terminal-border);
+  border-radius: 12px;
+  padding: 6px 8px 6px 14px;
+  background: var(--canvas-elevated);
+  box-shadow: var(--shadow-small);
+}
+
+.terminal-control-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.terminal-control-label {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: -0.01em;
+}
+
+.terminal-control-subtitle {
+  overflow: hidden;
+  color: var(--mute);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.terminal-theme-dropdown {
+  flex: 0 0 190px;
+}
+
+.terminal-theme-dropdown .dropdown-trigger {
+  min-height: 36px;
 }
 
 .terminal-frame {
@@ -1156,8 +1202,8 @@ code {
   }
 
   .notice {
-    top: 112px;
     right: 16px;
+    bottom: 16px;
     max-width: calc(100% - 32px);
   }
 
@@ -1229,6 +1275,18 @@ code {
   .terminal-view {
     gap: 8px;
     height: 100%;
+  }
+
+  .terminal-control-bar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .terminal-theme-dropdown {
+    width: 100%;
+    flex-basis: auto;
   }
 
   .nav-dropdown {

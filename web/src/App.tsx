@@ -11,10 +11,11 @@ type DropdownOption = { value: string; label: string };
 const themeStorageKey = "open-termkit-theme";
 const terminalConnectTimeoutMs = 8000;
 const terminalReconnectDelayMs = 1500;
+const defaultTerminalTheme = "monokai";
 const profileThemeOptions = [
-  { value: "monokai", label: "monokai" },
-  { value: "solarized-dark", label: "solarized-dark" },
-  { value: "light", label: "light" }
+  { value: "monokai", label: "Monokai" },
+  { value: "solarized-dark", label: "Solarized Dark" },
+  { value: "light", label: "Light" }
 ] satisfies DropdownOption[];
 
 const navItems = [
@@ -82,6 +83,16 @@ export default function App() {
       if (items.some((profile) => profile.id === current)) return current;
       return (items.find((profile) => profile.isDefault) ?? items[0])?.id ?? "";
     });
+  };
+
+  const updateActiveTerminalTheme = async (nextTerminalTheme: string) => {
+    if (!activeTerminalProfile || activeTerminalProfile.theme === nextTerminalTheme) return;
+    const updated = await api<TerminalProfile>(`/api/profiles/${activeTerminalProfile.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ ...activeTerminalProfile, theme: nextTerminalTheme })
+    });
+    setTerminalProfiles((current) => current.map((profile) => (profile.id === updated.id ? updated : profile)));
+    setNotice("Terminal color scheme updated");
   };
 
   useEffect(() => {
@@ -184,8 +195,8 @@ export default function App() {
         {view === "terminal" && (
           <TerminalView
             activeProfile={activeTerminalProfile}
-            appTheme={theme}
             onNotice={setNotice}
+            onThemeChange={updateActiveTerminalTheme}
             setPingMs={setTerminalPingMs}
             setStatus={setTerminalStatus}
           />
@@ -280,14 +291,14 @@ function connectionStatusTooltip(status: string, pingMs: number | null) {
 
 function TerminalView({
   activeProfile,
-  appTheme,
   onNotice,
+  onThemeChange,
   setPingMs,
   setStatus
 }: {
   activeProfile?: TerminalProfile;
-  appTheme: Theme;
   onNotice: (message: string) => void;
+  onThemeChange: (theme: string) => Promise<void>;
   setPingMs: (pingMs: number | null) => void;
   setStatus: (status: string) => void;
 }) {
@@ -295,7 +306,7 @@ function TerminalView({
   const socketRef = useRef<WebSocket | null>(null);
   const latestSizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
-  const terminalTheme = appTheme === "light" ? "light" : activeProfile?.theme || "monokai";
+  const terminalTheme = activeProfile?.theme || defaultTerminalTheme;
 
   const send = (payload: unknown, socket = socketRef.current) => {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload));
@@ -412,6 +423,22 @@ function TerminalView({
 
   return (
     <section className="view terminal-view">
+      <div className="terminal-control-bar">
+        <div className="terminal-control-copy">
+          <span className="terminal-control-label">Color scheme</span>
+          <span className="terminal-control-subtitle">
+            {activeProfile ? `${activeProfile.name} profile` : "Create or select a profile"}
+          </span>
+        </div>
+        <CustomDropdown
+          className="terminal-theme-dropdown"
+          disabled={!activeProfile}
+          label="Terminal color scheme"
+          onChange={(value) => void onThemeChange(value).catch((error: Error) => onNotice(error.message))}
+          options={profileThemeOptions}
+          value={activeProfile?.theme || defaultTerminalTheme}
+        />
+      </div>
       <div className="terminal-frame">
         {activeProfile ? (
           <WTerminal
@@ -450,7 +477,7 @@ function ProfilesView({
     name: "",
     shellCommand: "",
     cwd: "",
-    theme: "monokai",
+    theme: defaultTerminalTheme,
     fontFamily: "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace",
     fontSize: 14,
     isDefault: false
@@ -474,7 +501,7 @@ function ProfilesView({
       name: "",
       shellCommand: "",
       cwd: "",
-      theme: "monokai",
+      theme: defaultTerminalTheme,
       fontFamily: "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace",
       fontSize: 14,
       isDefault: false
