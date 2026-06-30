@@ -823,7 +823,7 @@ button.item-main:hover strong {
 }
 
 .item-main strong,
-.tool-card strong {
+.tool-title strong {
   overflow: hidden;
   color: var(--ink);
   text-overflow: ellipsis;
@@ -835,7 +835,6 @@ button.item-main:hover strong {
 }
 
 .item-main span,
-.tool-card span,
 .setting-row span {
   overflow: hidden;
   color: var(--mute);
@@ -1077,15 +1076,13 @@ textarea {
   padding: 24px;
 }
 
-.summary-grid,
-.tool-grid {
+.summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 
-.summary-grid > div,
-.tool-card {
+.summary-grid > div {
   border: 1px solid var(--hairline);
   border-radius: 12px;
   padding: 24px;
@@ -1108,24 +1105,244 @@ textarea {
   line-height: 20px;
 }
 
-.tool-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
+.tools-view {
+  width: min(100%, 1280px);
 }
 
-.tool-grid > .empty-state {
-  grid-column: 1 / -1;
+.tools-header {
+  align-items: flex-end;
+}
+
+.tool-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.tool-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  min-height: 36px;
+  color: var(--mute);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.tool-stats span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.tool-stats span + span::before {
+  width: 1px;
+  height: 14px;
+  margin: 0 12px;
+  background: var(--hairline);
+  content: "";
+}
+
+.tool-stats strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.compact-button {
+  min-height: 36px;
+  padding-inline: 14px;
+}
+
+.tool-board {
+  overflow: hidden;
   border: 1px solid var(--hairline);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--canvas-elevated);
   box-shadow: var(--shadow-small);
 }
 
-.tool-card .secondary {
+.tool-board-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--hairline);
+  padding: 22px 24px 20px;
+}
+
+.tool-board-header h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.02em;
+}
+
+.tool-board-header p {
+  margin: 4px 0 0;
+  color: var(--body);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.tool-board-header > span {
+  flex: 0 0 auto;
+  color: var(--mute);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.tool-board > .empty-state {
+  min-height: 260px;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.tool-card {
+  display: flex;
+  min-width: 0;
+  min-height: 228px;
+  flex-direction: column;
+  gap: 18px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 18px;
+  background: var(--canvas-elevated);
+  box-shadow: var(--shadow-small);
+}
+
+.tool-card.missing {
+  background: linear-gradient(180deg, var(--canvas-elevated), color-mix(in srgb, var(--warning-soft) 22%, var(--canvas-elevated)));
+}
+
+.tool-card-header {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--hairline-soft);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0;
+}
+
+.tool-title {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tool-title span {
+  overflow: hidden;
+  color: var(--mute);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.tool-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tool-meta {
+  min-width: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--hairline-soft);
+}
+
+.tool-meta.wide {
   grid-column: 1 / -1;
-  width: 100%;
+}
+
+.tool-meta span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--mute);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.tool-meta code {
+  display: block;
+  color: var(--ink);
+}
+
+.tool-card-footer {
+  display: flex;
+  min-width: 0;
+  min-height: 40px;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  border-top: 1px solid var(--hairline);
+  padding-top: 16px;
+  color: var(--body);
+}
+
+.tool-card-footer.launch {
+  justify-content: flex-end;
+}
+
+.tool-launch-button {
+  min-width: 104px;
+}
+
+.tool-card-footer.installable {
+  align-items: stretch;
+}
+
+.tool-card-footer.installable code {
+  display: flex;
+  min-width: 0;
+  min-height: 36px;
+  flex: 1 1 auto;
+  align-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: var(--hairline-soft);
+}
+
+.tool-card-footer .secondary {
+  flex: 0 0 auto;
+}
+
+.tool-card-footer.unavailable {
+  color: var(--mute);
+  font-size: 13px;
+  line-height: 20px;
 }
 
 .setting-row {
@@ -1214,8 +1431,14 @@ code {
   }
 
   .toolbar,
-  .button-row {
+  .button-row,
+  .tool-header-actions {
     justify-content: flex-start;
+  }
+
+  .tool-board-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .content-grid {
@@ -1302,9 +1525,39 @@ code {
     line-height: 36px;
   }
 
-  .item-card,
-  .tool-card {
+  .item-card {
     grid-template-columns: 1fr;
+  }
+
+  .tool-grid,
+  .tool-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-grid {
+    padding: 12px;
+  }
+
+  .tool-card {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .tool-card-header {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .tool-card-header .pill {
+    grid-column: 1 / -1;
+  }
+
+  .tool-card-footer.installable {
+    flex-direction: column;
+  }
+
+  .tool-card-footer .secondary,
+  .tool-launch-button {
+    width: 100%;
   }
 
   .panel-heading,

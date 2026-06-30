@@ -112,6 +112,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(""), 3600);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+
+  useEffect(() => {
     void refreshTerminalProfiles().catch((error: Error) => setNotice(error.message));
   }, []);
 
@@ -125,6 +131,45 @@ export default function App() {
       window.history.pushState(null, "", nextPath);
     }
     setView(nextView);
+  };
+
+  const launchToolProfile = async (tool: Tool) => {
+    const command = tool.profileCommand.length > 0 ? tool.profileCommand : [tool.binary];
+    const [shellCommand, ...args] = command;
+    if (!shellCommand) {
+      setNotice(`No launch command for ${tool.displayName}`);
+      return;
+    }
+
+    const profiles = terminalProfiles.length > 0 ? terminalProfiles : await loadProfiles();
+    let profile = profiles.find(
+      (item) => item.shellCommand === shellCommand && item.args.join("\u0000") === args.join("\u0000")
+    );
+
+    if (!profile) {
+      profile = await api<TerminalProfile>("/api/profiles", {
+        method: "POST",
+        body: JSON.stringify({
+          name: tool.displayName,
+          shellCommand,
+          args,
+          cwd: "",
+          theme: "monokai",
+          fontFamily: "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace",
+          fontSize: 14,
+          env: {},
+          keybindings: {},
+          wtermSettings: { cursorBlink: true, autoResize: true },
+          isDefault: false
+        })
+      });
+    }
+
+    const items = await loadProfiles();
+    setTerminalProfiles(items);
+    setActiveTerminalID(profile.id);
+    setNotice(`Opened ${tool.displayName}`);
+    navigate("terminal");
   };
 
   return (
@@ -204,7 +249,7 @@ export default function App() {
         {view === "profiles" && <ProfilesView onNotice={setNotice} onProfilesChanged={refreshTerminalProfiles} />}
         {view === "ssh" && <SSHView onNotice={setNotice} />}
         {view === "setup" && <SetupView onNotice={setNotice} />}
-        {view === "tools" && <ToolsView onNotice={setNotice} />}
+        {view === "tools" && <ToolsView onLaunchTool={launchToolProfile} onNotice={setNotice} />}
         {view === "settings" && <SettingsView onNotice={setNotice} />}
       </main>
     </div>
@@ -825,53 +870,147 @@ function SetupView({ onNotice }: { onNotice: (message: string) => void }) {
   );
 }
 
-function ToolsView({ onNotice }: { onNotice: (message: string) => void }) {
+function ToolsView({
+  onLaunchTool,
+  onNotice
+}: {
+  onLaunchTool: (tool: Tool) => Promise<void>;
+  onNotice: (message: string) => void;
+}) {
   const [toolsState, setToolsState] = useState<Tool[]>([]);
+  const installedCount = toolsState.filter((tool) => tool.installed).length;
+  const installableCount = toolsState.filter((tool) => !tool.installed && tool.installCommands.length > 0).length;
+  const lastCheckedAt = toolsState.reduce<string>((latest, tool) => {
+    if (!tool.lastCheckedAt) return latest;
+    if (!latest) return tool.lastCheckedAt;
+    return Date.parse(tool.lastCheckedAt) > Date.parse(latest) ? tool.lastCheckedAt : latest;
+  }, "");
+
   const refresh = async () => setToolsState(await api<Tool[]>("/api/tools"));
-  useEffect(() => void refresh(), []);
+  useEffect(() => void refresh().catch((error: Error) => onNotice(error.message)), []);
 
   return (
-    <section className="view">
-      <header className="view-header">
+    <section className="view tools-view">
+      <header className="view-header tools-header">
         <div>
           <h1>Tools</h1>
-          <p>{toolsState.filter((tool) => tool.installed).length} installed</p>
+          <p>Manage local terminal and agent CLIs detected on this machine.</p>
         </div>
-        <button className="icon-button" onClick={refresh} title="Refresh">
-          <span>Refresh</span>
-        </button>
+        <div className="tool-header-actions">
+          <div className="tool-stats" aria-label={`${installedCount} installed, ${installableCount} installable`}>
+            <span>
+              <strong>{installedCount}</strong> installed
+            </span>
+            <span>
+              <strong>{installableCount}</strong> installable
+            </span>
+          </div>
+          <button className="secondary compact-button" onClick={refresh} title="Refresh">
+            <span>Refresh</span>
+          </button>
+        </div>
       </header>
-      <div className="tool-grid">
+
+      <div className="tool-board">
+        <div className="tool-board-header">
+          <div>
+            <h2>Local utilities</h2>
+            <p>Versions, launch commands, and available installers.</p>
+          </div>
+          <span>{lastCheckedAt ? `Checked ${formatToolCheckedAt(lastCheckedAt)}` : "Not checked yet"}</span>
+        </div>
+
         {toolsState.length === 0 ? (
           <EmptyState title="No tools detected" body="Refresh tool detection to populate local agent utilities." />
         ) : (
-          toolsState.map((tool) => (
-            <article className="tool-card" key={tool.name}>
-              <div>
-                <strong>{tool.displayName}</strong>
-                <span>{tool.version || tool.binary}</span>
-              </div>
-              <span className={tool.installed ? "pill success" : "pill"}>{tool.installed ? "installed" : tool.category}</span>
-              {tool.installCommands[0] && !tool.installed && (
-                <button
-                  className="secondary"
-                  onClick={async () => {
-                    const command = tool.installCommands[0].args.join(" ");
-                    if (!window.confirm(`Run ${command}?`)) return;
-                    await api(`/api/tools/${tool.name}/install`, { method: "POST", body: JSON.stringify({ commandIndex: 0 }) });
-                    onNotice(`${tool.displayName} installed`);
-                    await refresh();
-                  }}
-                >
-                  <span>Install</span>
-                </button>
-              )}
-            </article>
-          ))
+          <div className="tool-grid">
+            {toolsState.map((tool) => {
+              const installCommand = tool.installCommands[0];
+              const launchCommand = tool.profileCommand.length > 0 ? tool.profileCommand.join(" ") : tool.binary;
+
+              return (
+                <article className={tool.installed ? "tool-card installed" : "tool-card missing"} key={tool.name}>
+                  <header className="tool-card-header">
+                    <span className="tool-icon" aria-hidden="true">
+                      {toolInitials(tool.displayName)}
+                    </span>
+                    <div className="tool-title">
+                      <strong title={tool.displayName}>{tool.displayName}</strong>
+                      <span title={tool.binary}>{tool.binary}</span>
+                    </div>
+                    <span className={tool.installed ? "pill success" : "pill"}>{tool.installed ? "installed" : "not installed"}</span>
+                  </header>
+
+                  <div className="tool-meta-grid">
+                    <div className="tool-meta">
+                      <span>Version</span>
+                      <code title={tool.version || "Not detected"}>{tool.version || "Not detected"}</code>
+                    </div>
+                    <div className="tool-meta">
+                      <span>Category</span>
+                      <code>{tool.category}</code>
+                    </div>
+                    <div className="tool-meta wide">
+                      <span>Launch command</span>
+                      <code title={launchCommand}>{launchCommand}</code>
+                    </div>
+                  </div>
+
+                  {tool.installed ? (
+                    <div className="tool-card-footer launch">
+                      <button
+                        className="primary tool-launch-button"
+                        onClick={() => void onLaunchTool(tool).catch((error: Error) => onNotice(error.message))}
+                      >
+                        <span>Launch</span>
+                      </button>
+                    </div>
+                  ) : installCommand ? (
+                    <div className="tool-card-footer installable">
+                      <code title={formatToolCommand(installCommand.args)}>{formatToolCommand(installCommand.args)}</code>
+                      <button
+                        className="secondary"
+                        onClick={async () => {
+                          const command = formatToolCommand(installCommand.args);
+                          if (!window.confirm(`Run ${command}?`)) return;
+                          await api(`/api/tools/${tool.name}/install`, { method: "POST", body: JSON.stringify({ commandIndex: 0 }) });
+                          onNotice(`${tool.displayName} installed`);
+                          await refresh();
+                        }}
+                      >
+                        <span>Install via {installCommand.label}</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="tool-card-footer unavailable">
+                      <span>No installer available for this platform.</span>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
         )}
       </div>
     </section>
   );
+}
+
+function toolInitials(label: string) {
+  const parts = label.split(/[\s-]+/).filter(Boolean);
+  if (parts.length === 0) return "T";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+}
+
+function formatToolCommand(args: string[]) {
+  return args.length > 0 ? args.join(" ") : "No command";
+}
+
+function formatToolCheckedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "recently";
+  return date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function SettingsView({ onNotice }: { onNotice: (message: string) => void }) {
