@@ -9,6 +9,8 @@ type Theme = "light" | "dark";
 type DropdownOption = { value: string; label: string };
 
 const themeStorageKey = "open-termkit-theme";
+const terminalConnectTimeoutMs = 8000;
+const terminalReconnectDelayMs = 1500;
 const profileThemeOptions = [
   { value: "monokai", label: "monokai" },
   { value: "solarized-dark", label: "solarized-dark" },
@@ -292,6 +294,7 @@ function TerminalView({
   const terminal = useTerminal();
   const socketRef = useRef<WebSocket | null>(null);
   const latestSizeRef = useRef<{ cols: number; rows: number } | null>(null);
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
   const terminalTheme = appTheme === "light" ? "light" : activeProfile?.theme || "monokai";
 
   const send = (payload: unknown, socket = socketRef.current) => {
@@ -310,12 +313,33 @@ function TerminalView({
   };
 
   useEffect(() => {
+    setConnectionAttempt(0);
+  }, [activeProfile?.id]);
+
+  useEffect(() => {
     if (!activeProfile) {
       setPingMs(null);
       setStatus("disconnected");
       return;
     }
     let pingInterval = 0;
+    let connectTimeout = 0;
+    let retryTimeout = 0;
+    let disposed = false;
+    let opened = false;
+    let sawExit = false;
+
+    const clearTimers = () => {
+      window.clearInterval(pingInterval);
+      window.clearTimeout(connectTimeout);
+      window.clearTimeout(retryTimeout);
+    };
+    const scheduleReconnect = () => {
+      if (disposed || sawExit) return;
+      retryTimeout = window.setTimeout(() => {
+        setConnectionAttempt((attempt) => attempt + 1);
+      }, terminalReconnectDelayMs);
+    };
     const sendPing = (socket: WebSocket) => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: "ping", data: String(Date.now()) }));
@@ -327,7 +351,15 @@ function TerminalView({
       wsURL(`/api/terminals/ws?profile_id=${encodeURIComponent(activeProfile.id)}&cols=80&rows=24`)
     );
     socketRef.current = socket;
+    connectTimeout = window.setTimeout(() => {
+      if (socket.readyState !== WebSocket.CONNECTING) return;
+      setPingMs(null);
+      setStatus("error");
+      socket.close();
+    }, terminalConnectTimeoutMs);
     socket.onopen = () => {
+      opened = true;
+      window.clearTimeout(connectTimeout);
       setStatus("connected");
       flushResize(socket);
       window.requestAnimationFrame(() => flushResize(socket));
@@ -336,10 +368,15 @@ function TerminalView({
       terminal.focus();
     };
     socket.onclose = () => {
+      clearTimers();
+      if (disposed || sawExit) return;
       setPingMs(null);
-      setStatus("disconnected");
+      setStatus(opened ? "disconnected" : "error");
+      scheduleReconnect();
     };
     socket.onerror = () => {
+      window.clearTimeout(connectTimeout);
+      if (disposed) return;
       setPingMs(null);
       setStatus("error");
     };
@@ -352,6 +389,7 @@ function TerminalView({
           if (Number.isFinite(sentAt)) setPingMs(Math.max(0, Math.round(Date.now() - sentAt)));
         }
         if (message.type === "exit") {
+          sawExit = true;
           setPingMs(null);
           setStatus(`exited ${message.code ?? 0}`);
         }
@@ -365,10 +403,12 @@ function TerminalView({
       }
     };
     return () => {
-      window.clearInterval(pingInterval);
+      disposed = true;
+      clearTimers();
+      if (socketRef.current === socket) socketRef.current = null;
       socket.close();
     };
-  }, [activeProfile?.id]);
+  }, [activeProfile?.id, connectionAttempt]);
 
   return (
     <section className="view terminal-view">
