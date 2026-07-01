@@ -19,25 +19,29 @@ On the Linux host:
 
 1. Confirm systemd is available.
 2. Confirm `/bin/bash` exists.
-3. Create the dedicated service account and state directories.
+3. Create the dedicated service account and state directories for non-root mode, or prepare `/root/.open-termkit` and `/root/.ssh` for root mode.
 4. Install the binary to `/var/lib/open-termkit/bin/open-termkit`.
-5. Install the unit file to `/etc/systemd/system/open-termkit.service`.
+5. Install the selected unit file to `/etc/systemd/system/open-termkit.service`.
 
 The binary is stored under `/var/lib/open-termkit/bin` instead of `/usr/local/bin` so the deployment also works on appliance-style Linux hosts where `/usr` is mounted read-only.
 
-The service user must have a real shell, or the service must set `SHELL=/bin/bash`, because Open Termkit launches PTY-backed shell sessions.
+The service user must have a real shell, or the service must set `SHELL=/bin/bash`, because Open Termkit launches PTY-backed shell sessions. Root mode is supported intentionally, but it makes the browser terminal a protected root shell.
 
 ## Stage 3: Configure systemd
 
-Use the tracked unit file at `deploy/systemd/open-termkit.service`.
+Use one of the tracked unit files:
+
+- `deploy/systemd/open-termkit.service` for the default dedicated `open-termkit` user.
+- `deploy/systemd/open-termkit-root.service` for an intentional root shell.
 
 Important choices in the unit:
 
 - `ExecStart` runs `/var/lib/open-termkit/bin/open-termkit serve --host 127.0.0.1 --port 8765`.
 - Host and port are CLI flags, not environment variables.
-- `HOME=/var/lib/open-termkit` keeps the SQLite database and managed SSH files under service-owned state.
+- Non-root mode sets `HOME=/var/lib/open-termkit` and keeps state under service-owned storage.
+- Root mode sets `HOME=/root`, uses `/root/.open-termkit` for the SQLite database, and uses `/root/.ssh` for managed SSH files.
 - The service uses `Restart=on-failure`.
-- Basic sandboxing is enabled while keeping `/var/lib/open-termkit` writable.
+- Non-root mode enables basic sandboxing. Root mode intentionally removes home and filesystem sandboxing so the terminal can administer the host.
 
 ## Stage 4: Start and verify
 
@@ -86,11 +90,17 @@ Local trigger:
 scripts/deploy-systemd.sh tnas-cf
 ```
 
+Run as root:
+
+```sh
+scripts/deploy-systemd.sh --run-as root tnas-cf
+```
+
 GitHub Actions trigger:
 
 1. Add the `SYSTEMD_SSH_PRIVATE_KEY` repository secret.
 2. Optionally add `SYSTEMD_SSH_KNOWN_HOSTS`; otherwise the workflow uses `ssh-keyscan`.
-3. Run the `Deploy native systemd` workflow manually with the target SSH host and user.
+3. Run the `Deploy native systemd` workflow manually with the target SSH host, SSH user, and desired `run_as` mode.
 
 The local script and workflow both discover the remote CPU architecture and build the matching Linux binary.
 
@@ -101,6 +111,8 @@ The local script and workflow both discover the remote CPU architecture and buil
 - [x] Added a tracked systemd unit file.
 - [x] Added a deployment helper script.
 - [x] Added a manual GitHub Actions deployment workflow.
+- [x] Added `--run-as root` deployment support and a root systemd unit.
+- [x] Deployed `tnas-cf` in root mode and verified the service process runs as `root:root`.
 - [x] Build the Linux amd64 artifact.
 - [x] Install on `tnas-cf`.
 - [x] Verify the systemd service and local health endpoint.

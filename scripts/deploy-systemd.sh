@@ -3,15 +3,16 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/deploy-systemd.sh <ssh-host>
+Usage: scripts/deploy-systemd.sh [--run-as open-termkit|root] <ssh-host>
 
-Build a Linux Open Termkit binary, upload it to a host, install the tracked
+Build a Linux Open Termkit binary, upload it to a host, install the selected
 systemd unit, restart the service, and verify the localhost health endpoint.
 
 Defaults:
   service name: open-termkit
-  service user: open-termkit
-  service home: /var/lib/open-termkit
+  run as: open-termkit
+  non-root home: /var/lib/open-termkit
+  root home: /root
   binary path: /var/lib/open-termkit/bin/open-termkit
   bind address: 127.0.0.1:8765
 USAGE
@@ -26,21 +27,69 @@ fail() {
   exit 1
 }
 
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
+RUN_AS="open-termkit"
+HOST=""
 
-HOST="${1:-${SYSTEMD_HOST:-}}"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --run-as)
+      [[ $# -ge 2 ]] || fail "--run-as requires open-termkit or root"
+      RUN_AS="$2"
+      shift 2
+      ;;
+    --run-as=*)
+      RUN_AS="${1#--run-as=}"
+      shift
+      ;;
+    --)
+      shift
+      [[ $# -le 1 ]] || fail "expected one ssh host"
+      HOST="${1:-}"
+      shift $(( $# > 0 ? 1 : 0 ))
+      ;;
+    -*)
+      fail "unknown option: $1"
+      ;;
+    *)
+      [[ -z "$HOST" ]] || fail "expected one ssh host"
+      HOST="$1"
+      shift
+      ;;
+  esac
+done
+
+HOST="${HOST:-${SYSTEMD_HOST:-}}"
 [[ -n "$HOST" ]] || { usage >&2; exit 2; }
 
 SERVICE_NAME="open-termkit"
-SERVICE_USER="open-termkit"
-SERVICE_HOME="/var/lib/open-termkit"
 SERVICE_PORT="8765"
+BINARY_DIR="/var/lib/open-termkit/bin"
+BINARY_PATH="$BINARY_DIR/open-termkit"
+
+case "$RUN_AS" in
+  open-termkit)
+    SERVICE_USER="open-termkit"
+    SERVICE_GROUP="open-termkit"
+    SERVICE_HOME="/var/lib/open-termkit"
+    UNIT_BASENAME="open-termkit.service"
+    ;;
+  root)
+    SERVICE_USER="root"
+    SERVICE_GROUP="root"
+    SERVICE_HOME="/root"
+    UNIT_BASENAME="open-termkit-root.service"
+    ;;
+  *)
+    fail "unsupported --run-as value: $RUN_AS"
+    ;;
+esac
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-UNIT_FILE="$ROOT_DIR/deploy/systemd/open-termkit.service"
+UNIT_FILE="$ROOT_DIR/deploy/systemd/$UNIT_BASENAME"
 BUILD_DIR="$ROOT_DIR/tmp/deploy-systemd"
 
 [[ -f "$UNIT_FILE" ]] || fail "missing unit file: $UNIT_FILE"
@@ -63,6 +112,7 @@ case "$remote_machine" in
 esac
 
 log "remote architecture: $remote_machine -> GOARCH=$GOARCH"
+log "selected unit: $UNIT_BASENAME, user: $SERVICE_USER"
 log "building frontend"
 make -C "$ROOT_DIR" frontend
 
@@ -87,7 +137,7 @@ scp "$UNIT_FILE" "$HOST:$remote_tmp/open-termkit.service" >/dev/null
 
 log "installing service on $HOST"
 ssh "$HOST" \
-  "REMOTE_TMP='$remote_tmp' SERVICE_NAME='$SERVICE_NAME' SERVICE_USER='$SERVICE_USER' SERVICE_HOME='$SERVICE_HOME' SERVICE_PORT='$SERVICE_PORT' bash -s" <<'REMOTE'
+  "REMOTE_TMP='$remote_tmp' SERVICE_NAME='$SERVICE_NAME' SERVICE_USER='$SERVICE_USER' SERVICE_GROUP='$SERVICE_GROUP' SERVICE_HOME='$SERVICE_HOME' SERVICE_PORT='$SERVICE_PORT' BINARY_DIR='$BINARY_DIR' BINARY_PATH='$BINARY_PATH' RUN_AS='$RUN_AS' bash -s" <<'REMOTE'
 set -euo pipefail
 
 if [[ "$(id -u)" == "0" ]]; then
@@ -108,25 +158,32 @@ need_cmd bash
 need_cmd install
 need_cmd getent
 
-if ! getent group "$SERVICE_USER" >/dev/null; then
-  "${SUDO[@]}" groupadd --system "$SERVICE_USER"
+if [[ "$RUN_AS" != "root" ]]; then
+  if ! getent group "$SERVICE_GROUP" >/dev/null; then
+    "${SUDO[@]}" groupadd --system "$SERVICE_GROUP"
+  fi
+
+  if ! id "$SERVICE_USER" >/dev/null 2>&1; then
+    "${SUDO[@]}" useradd --system \
+      --gid "$SERVICE_GROUP" \
+      --home-dir "$SERVICE_HOME" \
+      --create-home \
+      --shell /bin/bash \
+      "$SERVICE_USER"
+  else
+    "${SUDO[@]}" usermod --shell /bin/bash "$SERVICE_USER"
+  fi
 fi
 
-if ! id "$SERVICE_USER" >/dev/null 2>&1; then
-  "${SUDO[@]}" useradd --system \
-    --gid "$SERVICE_USER" \
-    --home-dir "$SERVICE_HOME" \
-    --create-home \
-    --shell /bin/bash \
-    "$SERVICE_USER"
+if [[ "$RUN_AS" == "root" ]]; then
+  "${SUDO[@]}" install -d -o root -g root -m 0700 "$SERVICE_HOME"
 else
-  "${SUDO[@]}" usermod --shell /bin/bash "$SERVICE_USER"
+  "${SUDO[@]}" install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" -m 0750 "$SERVICE_HOME"
 fi
-
-"${SUDO[@]}" install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 "$SERVICE_HOME"
-"${SUDO[@]}" install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0700 "$SERVICE_HOME/.open-termkit" "$SERVICE_HOME/.ssh"
-"${SUDO[@]}" install -d -o root -g "$SERVICE_USER" -m 0750 "$SERVICE_HOME/bin"
-"${SUDO[@]}" install -o root -g "$SERVICE_USER" -m 0750 "$REMOTE_TMP/open-termkit" "$SERVICE_HOME/bin/open-termkit"
+"${SUDO[@]}" install -d -o "$SERVICE_USER" -g "$SERVICE_GROUP" -m 0700 "$SERVICE_HOME/.open-termkit" "$SERVICE_HOME/.ssh"
+"${SUDO[@]}" install -d -o root -g root -m 0755 /var/lib/open-termkit
+"${SUDO[@]}" install -d -o root -g root -m 0755 "$BINARY_DIR"
+"${SUDO[@]}" install -o root -g root -m 0755 "$REMOTE_TMP/open-termkit" "$BINARY_PATH"
 "${SUDO[@]}" install -o root -g root -m 0644 "$REMOTE_TMP/open-termkit.service" "/etc/systemd/system/$SERVICE_NAME.service"
 
 "${SUDO[@]}" systemctl daemon-reload
@@ -154,4 +211,4 @@ fi
 "${SUDO[@]}" systemctl status "$SERVICE_NAME" --no-pager --lines=12
 REMOTE
 
-printf 'deployed host=%s service=%s url=http://127.0.0.1:%s\n' "$HOST" "$SERVICE_NAME" "$SERVICE_PORT"
+printf 'deployed host=%s service=%s run_as=%s url=http://127.0.0.1:%s\n' "$HOST" "$SERVICE_NAME" "$RUN_AS" "$SERVICE_PORT"

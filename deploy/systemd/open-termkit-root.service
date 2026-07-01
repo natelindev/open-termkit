@@ -1,0 +1,28 @@
+[Unit]
+Description=Open Termkit root shell
+Documentation=https://github.com/natelindev/open-termkit
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root
+
+Environment=HOME=/root
+Environment=SHELL=/bin/bash
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+UMask=0077
+
+ExecStartPre=/usr/bin/install -d -m 0700 /root/.open-termkit /root/.ssh
+ExecStart=/var/lib/open-termkit/bin/open-termkit serve --host 127.0.0.1 --port 8765
+
+Restart=on-failure
+RestartSec=5
+
+ReadOnlyPaths=/var/lib/open-termkit/bin
+
+[Install]
+WantedBy=multi-user.target

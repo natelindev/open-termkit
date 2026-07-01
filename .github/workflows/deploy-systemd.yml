@@ -12,6 +12,14 @@ on:
         required: true
         default: root
         type: string
+      run_as:
+        description: Linux user for the Open Termkit service
+        required: true
+        default: open-termkit
+        type: choice
+        options:
+          - open-termkit
+          - root
 
 permissions:
   contents: read
@@ -78,4 +86,4 @@ jobs:
         run: go test ./...
 
       - name: Deploy
-        run: scripts/deploy-systemd.sh systemd-target
+        run: scripts/deploy-systemd.sh --run-as "${{ inputs.run_as }}" systemd-target
