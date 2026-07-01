@@ -49,3 +49,35 @@ make build
 ```
 
 The frontend build output under `web/dist` is embedded into the Go binary at build time.
+
+## Docker
+
+Build the production image:
+
+```sh
+make frontend # only needed when web/dist is stale or missing
+make docker-build
+```
+
+The Dockerfile uses a Debian slim runtime with Bash and OpenSSH client, then embeds the prebuilt static files from `web/dist` into the Go binary. It does not run Node in any Docker build stage, and Node is not part of the runtime image.
+
+Run the app at <http://127.0.0.1:8765> with named volumes for the SQLite database and managed SSH files:
+
+```sh
+make docker-run
+```
+
+Or run Docker directly:
+
+```sh
+docker run --rm -it -p 8765:8765 \
+  -v open-termkit-data:/home/open-termkit/.open-termkit \
+  -v open-termkit-ssh:/home/open-termkit/.ssh \
+  open-termkit:local
+```
+
+Smoke test a built image:
+
+```sh
+make docker-smoke
+```

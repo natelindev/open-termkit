@@ -1,0 +1,19 @@
+# Git and local metadata
+.git
+.gitignore
+.DS_Store
+
+# Build outputs, except web/dist which is embedded by the production Docker build
+bin/
+coverage.out
+web/tsconfig.tsbuildinfo
+
+# Dependencies and caches
+node_modules/
+web/node_modules/
+.npm/
+.cache/
+
+# Local runtime and QA artifacts
+tmp/
+*.log
