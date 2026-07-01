@@ -157,6 +157,21 @@ need_cmd systemctl
 need_cmd bash
 need_cmd install
 need_cmd getent
+need_cmd awk
+
+DEFAULT_SHELL="$(command -v zsh || command -v bash || command -v sh || true)"
+[[ -n "$DEFAULT_SHELL" ]] || {
+  printf 'no usable shell found on remote host\n' >&2
+  exit 1
+}
+
+awk -v shell="$DEFAULT_SHELL" '{
+  if ($0 ~ /^Environment=SHELL=/) {
+    print "Environment=SHELL=" shell
+  } else {
+    print $0
+  }
+}' "$REMOTE_TMP/open-termkit.service" > "$REMOTE_TMP/open-termkit.service.rendered"
 
 if [[ "$RUN_AS" != "root" ]]; then
   if ! getent group "$SERVICE_GROUP" >/dev/null; then
@@ -168,10 +183,10 @@ if [[ "$RUN_AS" != "root" ]]; then
       --gid "$SERVICE_GROUP" \
       --home-dir "$SERVICE_HOME" \
       --create-home \
-      --shell /bin/bash \
+      --shell "$DEFAULT_SHELL" \
       "$SERVICE_USER"
   else
-    "${SUDO[@]}" usermod --shell /bin/bash "$SERVICE_USER"
+    "${SUDO[@]}" usermod --shell "$DEFAULT_SHELL" "$SERVICE_USER"
   fi
 fi
 
@@ -184,7 +199,7 @@ fi
 "${SUDO[@]}" install -d -o root -g root -m 0755 /var/lib/open-termkit
 "${SUDO[@]}" install -d -o root -g root -m 0755 "$BINARY_DIR"
 "${SUDO[@]}" install -o root -g root -m 0755 "$REMOTE_TMP/open-termkit" "$BINARY_PATH"
-"${SUDO[@]}" install -o root -g root -m 0644 "$REMOTE_TMP/open-termkit.service" "/etc/systemd/system/$SERVICE_NAME.service"
+"${SUDO[@]}" install -o root -g root -m 0644 "$REMOTE_TMP/open-termkit.service.rendered" "/etc/systemd/system/$SERVICE_NAME.service"
 
 "${SUDO[@]}" systemctl daemon-reload
 "${SUDO[@]}" systemctl enable "$SERVICE_NAME" >/dev/null

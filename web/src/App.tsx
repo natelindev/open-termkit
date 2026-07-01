@@ -14,7 +14,16 @@ const terminalReconnectDelayMs = 1500;
 const defaultTerminalTheme = "monokai";
 const profileThemeOptions = [
   { value: "monokai", label: "Monokai" },
+  { value: "tokyo-night", label: "Tokyo Night" },
+  { value: "catppuccin-mocha", label: "Catppuccin Mocha" },
+  { value: "dracula", label: "Dracula" },
+  { value: "nord", label: "Nord" },
+  { value: "gruvbox-dark", label: "Gruvbox Dark" },
+  { value: "one-dark", label: "One Dark" },
+  { value: "github-dark", label: "GitHub Dark" },
+  { value: "rose-pine", label: "Rose Pine" },
   { value: "solarized-dark", label: "Solarized Dark" },
+  { value: "solarized-light", label: "Solarized Light" },
   { value: "light", label: "Light" }
 ] satisfies DropdownOption[];
 
@@ -154,7 +163,7 @@ export default function App() {
           shellCommand,
           args,
           cwd: "",
-          theme: "monokai",
+          theme: defaultTerminalTheme,
           fontFamily: "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace",
           fontSize: 14,
           env: {},
@@ -188,6 +197,17 @@ export default function App() {
               onChange={setActiveTerminalID}
               options={terminalProfileOptions}
               value={activeTerminalProfile?.id ?? ""}
+            />
+          </div>
+          <div className="scheme-selector" aria-label="Terminal color scheme selector">
+            <span className="scheme-selector-label">Scheme</span>
+            <CustomDropdown
+              className="scheme-dropdown"
+              disabled={!activeTerminalProfile}
+              label="Terminal color scheme"
+              onChange={(value) => void updateActiveTerminalTheme(value).catch((error: Error) => setNotice(error.message))}
+              options={profileThemeOptions}
+              value={activeTerminalProfile?.theme || defaultTerminalTheme}
             />
           </div>
         </div>
@@ -241,7 +261,6 @@ export default function App() {
           <TerminalView
             activeProfile={activeTerminalProfile}
             onNotice={setNotice}
-            onThemeChange={updateActiveTerminalTheme}
             setPingMs={setTerminalPingMs}
             setStatus={setTerminalStatus}
           />
@@ -337,13 +356,11 @@ function connectionStatusTooltip(status: string, pingMs: number | null) {
 function TerminalView({
   activeProfile,
   onNotice,
-  onThemeChange,
   setPingMs,
   setStatus
 }: {
   activeProfile?: TerminalProfile;
   onNotice: (message: string) => void;
-  onThemeChange: (theme: string) => Promise<void>;
   setPingMs: (pingMs: number | null) => void;
   setStatus: (status: string) => void;
 }) {
@@ -468,22 +485,6 @@ function TerminalView({
 
   return (
     <section className="view terminal-view">
-      <div className="terminal-control-bar">
-        <div className="terminal-control-copy">
-          <span className="terminal-control-label">Color scheme</span>
-          <span className="terminal-control-subtitle">
-            {activeProfile ? `${activeProfile.name} profile` : "Create or select a profile"}
-          </span>
-        </div>
-        <CustomDropdown
-          className="terminal-theme-dropdown"
-          disabled={!activeProfile}
-          label="Terminal color scheme"
-          onChange={(value) => void onThemeChange(value).catch((error: Error) => onNotice(error.message))}
-          options={profileThemeOptions}
-          value={activeProfile?.theme || defaultTerminalTheme}
-        />
-      </div>
       <div className="terminal-frame">
         {activeProfile ? (
           <WTerminal

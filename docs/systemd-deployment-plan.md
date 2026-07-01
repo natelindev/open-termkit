@@ -18,14 +18,14 @@ For ARM64 hosts, use `GOARCH=arm64`.
 On the Linux host:
 
 1. Confirm systemd is available.
-2. Confirm `/bin/bash` exists.
+2. Confirm `zsh` exists, or allow the deploy script to fall back to `bash` or `sh`.
 3. Create the dedicated service account and state directories for non-root mode, or prepare `/root/.open-termkit` and `/root/.ssh` for root mode.
 4. Install the binary to `/var/lib/open-termkit/bin/open-termkit`.
 5. Install the selected unit file to `/etc/systemd/system/open-termkit.service`.
 
 The binary is stored under `/var/lib/open-termkit/bin` instead of `/usr/local/bin` so the deployment also works on appliance-style Linux hosts where `/usr` is mounted read-only.
 
-The service user must have a real shell, or the service must set `SHELL=/bin/bash`, because Open Termkit launches PTY-backed shell sessions. Root mode is supported intentionally, but it makes the browser terminal a protected root shell.
+The service user must have a real shell. The deploy script prefers `zsh`, then falls back to `bash` or `sh`, because Open Termkit launches PTY-backed shell sessions. Root mode is supported intentionally, but it makes the browser terminal a protected root shell.
 
 ## Stage 3: Configure systemd
 
@@ -40,6 +40,7 @@ Important choices in the unit:
 - Host and port are CLI flags, not environment variables.
 - Non-root mode sets `HOME=/var/lib/open-termkit` and keeps state under service-owned storage.
 - Root mode sets `HOME=/root`, uses `/root/.open-termkit` for the SQLite database, and uses `/root/.ssh` for managed SSH files.
+- The deployed unit sets `SHELL` to the remote `zsh` path when available.
 - The service uses `Restart=on-failure`.
 - Non-root mode enables basic sandboxing. Root mode intentionally removes home and filesystem sandboxing so the terminal can administer the host.
 
@@ -113,6 +114,7 @@ The local script and workflow both discover the remote CPU architecture and buil
 - [x] Added a manual GitHub Actions deployment workflow.
 - [x] Added `--run-as root` deployment support and a root systemd unit.
 - [x] Deployed `tnas-cf` in root mode and verified the service process runs as `root:root`.
+- [x] Updated deployment to prefer `zsh` for service shell sessions.
 - [x] Build the Linux amd64 artifact.
 - [x] Install on `tnas-cf`.
 - [x] Verify the systemd service and local health endpoint.

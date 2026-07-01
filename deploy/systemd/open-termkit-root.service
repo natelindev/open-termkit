@@ -11,7 +11,7 @@ Group=root
 WorkingDirectory=/root
 
 Environment=HOME=/root
-Environment=SHELL=/bin/bash
+Environment=SHELL=/usr/bin/zsh
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 UMask=0077

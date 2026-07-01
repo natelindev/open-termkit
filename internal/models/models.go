@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 )
@@ -68,11 +69,26 @@ func NewID(prefix string) string {
 	return prefix + "_" + strconv.FormatInt(time.Now().UnixNano(), 36) + hex.EncodeToString(b[:])
 }
 
-func DefaultTerminalProfile() TerminalProfile {
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		shell = "/bin/bash"
+func DefaultShellCommand() string {
+	if zsh, err := exec.LookPath("zsh"); err == nil {
+		return zsh
 	}
+	if shell := os.Getenv("SHELL"); shell != "" {
+		if resolved, err := exec.LookPath(shell); err == nil {
+			return resolved
+		}
+		if _, err := os.Stat(shell); err == nil {
+			return shell
+		}
+	}
+	if bash, err := exec.LookPath("bash"); err == nil {
+		return bash
+	}
+	return "/bin/sh"
+}
+
+func DefaultTerminalProfile() TerminalProfile {
+	shell := DefaultShellCommand()
 	home, _ := os.UserHomeDir()
 
 	now := time.Now().UTC()
@@ -105,10 +121,7 @@ func NormalizeTerminalProfile(p TerminalProfile) TerminalProfile {
 		p.Name = "Untitled Profile"
 	}
 	if p.ShellCommand == "" {
-		p.ShellCommand = os.Getenv("SHELL")
-		if p.ShellCommand == "" {
-			p.ShellCommand = "/bin/bash"
-		}
+		p.ShellCommand = DefaultShellCommand()
 	}
 	if p.Env == nil {
 		p.Env = map[string]string{}

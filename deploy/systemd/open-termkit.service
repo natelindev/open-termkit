@@ -11,7 +11,7 @@ Group=open-termkit
 WorkingDirectory=/var/lib/open-termkit
 
 Environment=HOME=/var/lib/open-termkit
-Environment=SHELL=/bin/bash
+Environment=SHELL=/usr/bin/zsh
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 
 StateDirectory=open-termkit

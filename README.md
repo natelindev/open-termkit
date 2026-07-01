@@ -96,4 +96,4 @@ By default the service runs as the dedicated `open-termkit` user. To intentional
 scripts/deploy-systemd.sh --run-as root <ssh-host>
 ```
 
-You can also trigger the manual `Deploy native systemd` GitHub Actions workflow after adding the SSH deployment secret. The service binds to `127.0.0.1:8765` by default. Non-root mode stores state under `/var/lib/open-termkit`; root mode stores state under `/root`. See [`docs/systemd-deployment-plan.md`](docs/systemd-deployment-plan.md) for the full deployment plan, security notes, and reverse proxy guidance.
+You can also trigger the manual `Deploy native systemd` GitHub Actions workflow after adding the SSH deployment secret. The service binds to `127.0.0.1:8765` by default and prefers `zsh` for shell sessions when it is available. Non-root mode stores state under `/var/lib/open-termkit`; root mode stores state under `/root`. See [`docs/systemd-deployment-plan.md`](docs/systemd-deployment-plan.md) for the full deployment plan, security notes, and reverse proxy guidance.
