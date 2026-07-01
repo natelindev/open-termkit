@@ -1,0 +1,81 @@
+name: Deploy native systemd
+
+on:
+  workflow_dispatch:
+    inputs:
+      ssh_host:
+        description: SSH host or DNS name for the Linux target
+        required: true
+        type: string
+      ssh_user:
+        description: SSH user with passwordless sudo, or root
+        required: true
+        default: root
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-systemd-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ inputs.ssh_host }}
+      SSH_USER: ${{ inputs.ssh_user }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SYSTEMD_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SYSTEMD_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY" || { echo "SYSTEMD_SSH_PRIVATE_KEY secret is required"; exit 2; }
+
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/systemd_deploy_key
+          chmod 0600 ~/.ssh/systemd_deploy_key
+
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$SSH_HOST" > ~/.ssh/known_hosts
+          fi
+          chmod 0644 ~/.ssh/known_hosts
+
+          cat > ~/.ssh/config <<EOF
+          Host systemd-target
+            HostName $SSH_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/systemd_deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+          chmod 0600 ~/.ssh/config
+
+      - name: Test
+        run: go test ./...
+
+      - name: Deploy
+        run: scripts/deploy-systemd.sh systemd-target

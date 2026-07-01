@@ -81,3 +81,13 @@ Smoke test a built image:
 ```sh
 make docker-smoke
 ```
+
+## Native systemd deployment
+
+For a native Linux install without Docker, use the tracked unit file and deployment helper:
+
+```sh
+scripts/deploy-systemd.sh <ssh-host>
+```
+
+You can also trigger the manual `Deploy native systemd` GitHub Actions workflow after adding the SSH deployment secret. The service binds to `127.0.0.1:8765` by default and stores state under `/var/lib/open-termkit`. See [`docs/systemd-deployment-plan.md`](docs/systemd-deployment-plan.md) for the full deployment plan, security notes, and reverse proxy guidance.

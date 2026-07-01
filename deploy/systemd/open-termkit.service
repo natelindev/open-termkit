@@ -1,0 +1,34 @@
+[Unit]
+Description=Open Termkit
+Documentation=https://github.com/natelindev/open-termkit
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=open-termkit
+Group=open-termkit
+WorkingDirectory=/var/lib/open-termkit
+
+Environment=HOME=/var/lib/open-termkit
+Environment=SHELL=/bin/bash
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+StateDirectory=open-termkit
+StateDirectoryMode=0750
+UMask=0077
+
+ExecStartPre=/usr/bin/install -d -m 0700 /var/lib/open-termkit/.open-termkit /var/lib/open-termkit/.ssh
+ExecStart=/var/lib/open-termkit/bin/open-termkit serve --host 127.0.0.1 --port 8765
+
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadOnlyPaths=/var/lib/open-termkit/bin
+
+[Install]
+WantedBy=multi-user.target
