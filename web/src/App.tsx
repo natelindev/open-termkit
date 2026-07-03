@@ -62,6 +62,7 @@ export default function App() {
   );
   const [notice, setNotice] = useState("");
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [followOutput, setFollowOutput] = useState(true);
   const [terminalProfiles, setTerminalProfiles] = useState<TerminalProfile[]>([]);
   const [activeTerminalID, setActiveTerminalID] = useState("");
   const [terminalStatus, setTerminalStatus] = useState("disconnected");
@@ -240,6 +241,16 @@ export default function App() {
             </span>
           </div>
           <button
+            aria-label={followOutput ? "Unlock output follow" : "Lock output follow"}
+            aria-pressed={followOutput}
+            className={followOutput ? "theme-button follow-output-button active" : "theme-button follow-output-button"}
+            onClick={() => setFollowOutput((current) => !current)}
+            title={followOutput ? "Unlock output follow" : "Lock output follow"}
+            type="button"
+          >
+            <FollowOutputIcon locked={followOutput} />
+          </button>
+          <button
             className="theme-button"
             onClick={() => setTheme(nextTheme)}
             type="button"
@@ -260,6 +271,7 @@ export default function App() {
         {view === "terminal" && (
           <TerminalView
             activeProfile={activeTerminalProfile}
+            followOutput={followOutput}
             onNotice={setNotice}
             setPingMs={setTerminalPingMs}
             setStatus={setTerminalStatus}
@@ -272,6 +284,30 @@ export default function App() {
         {view === "settings" && <SettingsView onNotice={setNotice} />}
       </main>
     </div>
+  );
+}
+
+function FollowOutputIcon({ locked }: { locked: boolean }) {
+  if (locked) {
+    return (
+      <svg className="theme-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none">
+        <path d="M10 3.5v8.25" stroke="currentColor" strokeLinecap="round" />
+        <path d="m6.75 8.75 3.25 3.25 3.25-3.25" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4.75 15.5h10.5" stroke="currentColor" strokeLinecap="round" />
+        <path d="M13.75 14.25v-1.2a1.55 1.55 0 0 1 3.1 0v1.2" stroke="currentColor" strokeLinecap="round" />
+        <rect x="13" y="14.25" width="4.6" height="3" rx="0.8" stroke="currentColor" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="theme-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none">
+      <path d="M10 3.5v8.25" stroke="currentColor" strokeLinecap="round" />
+      <path d="m6.75 8.75 3.25 3.25 3.25-3.25" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4.75 15.5h10.5" stroke="currentColor" strokeLinecap="round" />
+      <path d="M13.25 14.2v-1.15a1.55 1.55 0 0 1 2.78-.95" stroke="currentColor" strokeLinecap="round" />
+      <rect x="13" y="14.25" width="4.6" height="3" rx="0.8" stroke="currentColor" />
+    </svg>
   );
 }
 
@@ -355,20 +391,64 @@ function connectionStatusTooltip(status: string, pingMs: number | null) {
 
 function TerminalView({
   activeProfile,
+  followOutput,
   onNotice,
   setPingMs,
   setStatus
 }: {
   activeProfile?: TerminalProfile;
+  followOutput: boolean;
   onNotice: (message: string) => void;
   setPingMs: (pingMs: number | null) => void;
   setStatus: (status: string) => void;
 }) {
   const terminal = useTerminal();
+  const terminalRef = terminal.ref as RefObject<TerminalHandle>;
   const socketRef = useRef<WebSocket | null>(null);
   const latestSizeRef = useRef<{ cols: number; rows: number } | null>(null);
+  const followOutputRef = useRef(followOutput);
+  const followScrollTimerRef = useRef(0);
+  const followScrollRafRef = useRef(0);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
   const terminalTheme = activeProfile?.theme || defaultTerminalTheme;
+
+  const scrollElementToBottom = (element: Element | null | undefined, alignToTerminalRows = false) => {
+    if (!(element instanceof HTMLElement)) return;
+    if (alignToTerminalRows) {
+      const maxScroll = element.scrollHeight - element.clientHeight;
+      const rowHeight = Number.parseFloat(getComputedStyle(element).getPropertyValue("--term-row-height"));
+      element.scrollTop = rowHeight > 0 ? Math.floor(maxScroll / rowHeight) * rowHeight : maxScroll;
+      return;
+    }
+    element.scrollTop = element.scrollHeight;
+  };
+
+  const scrollFollowTargetsToBottom = () => {
+    const terminalElement = terminalRef.current?.instance?.element;
+    scrollElementToBottom(terminalElement, true);
+    terminalElement?.scrollIntoView({ block: "end", inline: "nearest" });
+    scrollElementToBottom(terminalElement?.closest(".workspace"));
+    scrollElementToBottom(document.scrollingElement);
+    window.scrollTo(0, document.scrollingElement?.scrollHeight ?? document.body.scrollHeight);
+  };
+
+  const scheduleFollowScroll = () => {
+    if (!followOutputRef.current || followScrollTimerRef.current !== 0 || followScrollRafRef.current !== 0) return;
+    followScrollTimerRef.current = window.setTimeout(() => {
+      followScrollTimerRef.current = 0;
+      if (!followOutputRef.current) return;
+      followScrollRafRef.current = window.requestAnimationFrame(() => {
+        if (!followOutputRef.current) {
+          followScrollRafRef.current = 0;
+          return;
+        }
+        followScrollRafRef.current = window.requestAnimationFrame(() => {
+          followScrollRafRef.current = 0;
+          if (followOutputRef.current) scrollFollowTargetsToBottom();
+        });
+      });
+    }, 0);
+  };
 
   const send = (payload: unknown, socket = socketRef.current) => {
     if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload));
@@ -383,11 +463,31 @@ function TerminalView({
   const rememberResize = (cols: number, rows: number) => {
     latestSizeRef.current = { cols, rows };
     flushResize();
+    scheduleFollowScroll();
   };
 
   useEffect(() => {
     setConnectionAttempt(0);
   }, [activeProfile?.id]);
+
+  useEffect(() => {
+    followOutputRef.current = followOutput;
+    if (followOutput) {
+      scheduleFollowScroll();
+      return;
+    }
+    window.clearTimeout(followScrollTimerRef.current);
+    window.cancelAnimationFrame(followScrollRafRef.current);
+    followScrollTimerRef.current = 0;
+    followScrollRafRef.current = 0;
+  }, [followOutput]);
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(followScrollTimerRef.current);
+      window.cancelAnimationFrame(followScrollRafRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeProfile) {
@@ -456,7 +556,10 @@ function TerminalView({
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data) as { type: string; data?: string; code?: number; error?: string };
-        if (message.type === "output" && message.data) terminal.write(message.data);
+        if (message.type === "output" && message.data) {
+          terminal.write(message.data);
+          scheduleFollowScroll();
+        }
         if (message.type === "pong" && message.data) {
           const sentAt = Number(message.data);
           if (Number.isFinite(sentAt)) setPingMs(Math.max(0, Math.round(Date.now() - sentAt)));
@@ -473,6 +576,7 @@ function TerminalView({
         }
       } catch {
         terminal.write(String(event.data));
+        scheduleFollowScroll();
       }
     };
     return () => {
@@ -488,7 +592,7 @@ function TerminalView({
       <div className="terminal-frame">
         {activeProfile ? (
           <WTerminal
-            ref={terminal.ref as RefObject<TerminalHandle>}
+            ref={terminalRef}
             theme={terminalTheme}
             autoResize
             cursorBlink

@@ -408,6 +408,20 @@ nav::-webkit-scrollbar {
   box-shadow: var(--shadow-small);
 }
 
+.theme-button:hover {
+  background: var(--hairline-soft);
+}
+
+.theme-button:active {
+  transform: translateY(1px);
+}
+
+.follow-output-button.active {
+  border-color: color-mix(in srgb, var(--link) 42%, var(--hairline));
+  color: var(--ink);
+  background: var(--link-soft);
+}
+
 .theme-icon {
   width: 18px;
   height: 18px;
