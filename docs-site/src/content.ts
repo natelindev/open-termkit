@@ -2,6 +2,7 @@ export type Locale = "en" | "zh";
 
 export type ContentBlock =
   | { type: "paragraph"; text: string }
+  | { type: "image"; src: string; alt: string; caption: string }
   | { type: "heading"; level: 2 | 3; text: string; id: string }
   | { type: "code"; language: string; code: string; title?: string }
   | { type: "callout"; variant: "tip" | "note" | "warning"; title?: string; text: string }
@@ -26,12 +27,13 @@ export const docPagesEn: DocPage[] = [
     category: "Getting Started",
     title: "Introduction & Overview",
     navTitle: "Introduction & Overview",
-    summary: "Welcome to Open Termkit: a production-grade, self-hosted web terminal and developer control plane.",
+    summary: "Welcome to Open Termkit: a self-hosted web terminal and developer control plane.",
     estimatedReadTime: "3 min read",
     blocks: [
+      { type: "image", src: "./screenshots/open-termkit-dark.png", alt: "Open Termkit running an isolated sample shell in dark mode", caption: "The running application, using an isolated sample terminal." },
       {
         type: "paragraph",
-        text: "Open Termkit is an enterprise-grade terminal environment built with Go, React 18, wterm, and SQLite. It packages real-time PTY allocation, multi-tab terminal management, an SSH connection plane, autonomous AI coding agent detection, and persistent tmux workspaces into a single, self-contained binary."
+        text: "Open Termkit is a self-hosted terminal environment built with Go, React 18, wterm, and SQLite. It packages real-time PTY allocation, multi-tab terminal management, an SSH connection plane, autonomous AI coding agent detection, and persistent tmux workspaces into a single, self-contained binary."
       },
       {
         type: "callout",
@@ -53,7 +55,7 @@ export const docPagesEn: DocPage[] = [
           "Integrated SSH Manager: Natively generate Ed25519 keys, test TCP host latency, and launch 1-click interactive SSH terminal tabs.",
           "Autonomous Agent Hub: Auto-detect, install, and provision launch profiles for Claude Code, OpenAI Codex CLI, OpenCode, and Pi.",
           "Persistent Tmux Multiplexing: Built-in tmux presets prevent lost work when closing browser windows or encountering network disconnects.",
-          "Geist Design System: Precision-crafted monochrome UI adhering to Vercel Geist design tokens with flawless dark/light mode support."
+          "Geist Design System: Monochrome UI with persistent light and dark themes."
         ]
       },
       {
@@ -77,7 +79,7 @@ export const docPagesEn: DocPage[] = [
     category: "Getting Started",
     title: "Quickstart Guide",
     navTitle: "Quickstart Guide",
-    summary: "Get Open Termkit up and running in under two minutes from source or Docker.",
+    summary: "Build Open Termkit from source and launch your first local terminal.",
     estimatedReadTime: "4 min read",
     blocks: [
       {
@@ -92,7 +94,7 @@ export const docPagesEn: DocPage[] = [
       },
       {
         type: "paragraph",
-        text: "To build from source, ensure you have Go 1.22+ and Node.js 18+ installed on your system. Once compiled, the resulting binary is completely standalone."
+        text: "To build from source, ensure you have Go 1.26+ and Node.js 22+ installed on your system. Once compiled, the resulting binary is completely standalone."
       },
       {
         type: "heading",
@@ -372,13 +374,14 @@ Host prod-api
     category: "Tutorials",
     title: "Tutorial 5: Production Deployment & Remote Access",
     navTitle: "5. Production Deployment",
-    summary: "Deploy Open Termkit natively with systemd, Docker, and Cloudflare Pages.",
+    summary: "Run the terminal backend on Linux or Docker behind authenticated access. Host documentation separately.",
     estimatedReadTime: "7 min read",
     blocks: [
       {
         type: "paragraph",
-        text: "Learn how to deploy Open Termkit in production on a remote Linux server using native systemd or Docker, and configure global edge hosting with Cloudflare."
+        text: "Learn how to deploy Open Termkit in production on a remote Linux server using native systemd or Docker, and protect remote access with an authenticated proxy. Cloudflare Pages hosts only the documentation; it cannot run the Go PTY backend."
       },
+      { type: "callout", variant: "warning", title: "Remote access boundary", text: "Open Termkit has no built-in login or authorization, and currently accepts WebSocket connections from any origin. Keep the backend on loopback. Remote use requires authentication for every HTTP and WebSocket route, TLS, and origin restrictions at the proxy. Run under a dedicated user; terminal sessions inherit that user's permissions. The example proxy below requires your authentication layer before use." },
       {
         type: "heading",
         level: 2,
@@ -506,13 +509,13 @@ ssh user@your-server.com "sudo systemctl status open-termkit"`
     blocks: [
       {
         type: "paragraph",
-        text: "Open Termkit includes a zero-leak sync bundle mechanism. You can export all your terminal profiles, SSH host configurations, and settings to a JSON bundle to import on another machine."
+        text: "Open Termkit includes a key-safe sync bundle mechanism. You can export all your terminal profiles, SSH host configurations, and settings to a JSON bundle to import on another machine."
       },
       {
         type: "heading",
         level: 2,
         id: "private-key-safety",
-        text: "1. Zero-Leak Security Guarantee"
+        text: "1. Key-Safe Security Guarantee"
       },
       {
         type: "paragraph",
@@ -665,12 +668,13 @@ export const docPagesZh: DocPage[] = [
     category: "快速入门",
     title: "介绍与概述",
     navTitle: "介绍与概述",
-    summary: "欢迎使用 Open Termkit：生产级自托管 Web 终端与开发者工作台。",
+    summary: "欢迎使用 Open Termkit：自托管 Web 终端与开发者工作台。",
     estimatedReadTime: "约 3 分钟阅读",
     blocks: [
+      { type: "image", src: "./screenshots/open-termkit-dark.png", alt: "Open Termkit running an isolated sample shell in dark mode", caption: "\u8fd0\u884c\u4e2d\u7684\u5e94\u7528\uff0c\u4f7f\u7528\u9694\u79bb\u7684\u793a\u4f8b\u7ec8\u7aef\u3002" },
       {
         type: "paragraph",
-        text: "Open Termkit 是一款采用 Go、React 18、wterm 与 SQLite 构建的企业级终端控制台。它将实时系统 PTY 虚拟终端分配、多标签终端管理、SSH 密钥与远程连接平面、自主 AI 编程 Agent 检测以及 tmux 持久化会话打包进单个独立可执行二进制文件中。"
+        text: "Open Termkit 是一款采用 Go、React 18、wterm 与 SQLite 构建的自托管终端控制台。它将实时系统 PTY 虚拟终端分配、多标签终端管理、SSH 密钥与远程连接平面、自主 AI 编程 Agent 检测以及 tmux 持久化会话打包进单个独立可执行二进制文件中。"
       },
       {
         type: "callout",
@@ -731,7 +735,7 @@ export const docPagesZh: DocPage[] = [
       },
       {
         type: "paragraph",
-        text: "从源码编译仅需系统安装 Go 1.22+ 与 Node.js 18+（仅编译阶段需要）。编译完成后生成的二进制文件完全自包含，无任何外部依赖。"
+        text: "从源码编译仅需系统安装 Go 1.26+ 与 Node.js 22+（仅编译阶段需要）。编译完成后生成的二进制文件完全自包含，无任何外部依赖。"
       },
       {
         type: "heading",
@@ -1011,13 +1015,14 @@ Host prod-api
     category: "详细教程",
     title: "教程 5：生产级部署指南",
     navTitle: "5. 生产级部署",
-    summary: "通过 systemd、Docker 与 Cloudflare 全球边缘网络部署 Open Termkit。",
+    summary: "通过 systemd 或 Docker 运行终端后端，使用 Cloudflare Pages 托管独立文档。",
     estimatedReadTime: "约 7 分钟阅读",
     blocks: [
       {
         type: "paragraph",
         text: "了解如何在远程 Linux 服务器上使用原生 systemd 或 Docker 部署 Open Termkit，并通过 Nginx 配置 HTTPS 反向代理与 WebSocket 升级。"
       },
+      { type: "callout", variant: "warning", title: "远程访问边界", text: "当前服务没有内置登录或授权，WebSocket 接受任意来源连接。后端应监听回环地址；远程访问需要代理对所有 HTTP 和 WebSocket 路由进行身份认证、TLS 加密和来源限制。使用专用非 root 用户运行，终端继承服务用户的权限。下方代理示例需要先配置认证层。Cloudflare Pages 只能托管文档，不能运行 Go PTY 后端。" },
       {
         type: "heading",
         level: 2,

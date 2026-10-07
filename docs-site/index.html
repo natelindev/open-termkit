@@ -3,11 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <title>Open Termkit Documentation | Production Web Terminal</title>
+    <meta property="og:title" content="Open Termkit · Documentation" />
+    <meta property="og:description" content="Your shells, SSH hosts, and coding agents. One workspace." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Open Termkit Documentation | Self-hosted Web Terminal</title>
     <meta
       name="description"
-      content="Official documentation for Open Termkit: Production-grade self-hosted terminal environment built with Go, React, wterm, and SQLite."
+      content="Official documentation for Open Termkit: Self-hosted terminal environment built with Go, React, wterm, and SQLite."
     />
     <script>
       (() => {
@@ -30,6 +32,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript><main><h1>Open Termkit documentation</h1><p>Build with Go 1.26+ and Node.js 22+ using <code>make build</code>, then run <code>./bin/open-termkit serve --port 8765</code>.</p><p><a href="https://github.com/natelindev/open-termkit/blob/main/docs/README.md">Read all guides and references on GitHub</a>.</p></main></noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -15,3 +15,7 @@ docs-site/dist/
 docs-site/tsconfig.tsbuildinfo
 tmp/
 *.log
+
+# Cloudflare local state
+.wrangler/
+web/dist/open-termkit-mark.svg

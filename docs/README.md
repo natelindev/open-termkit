@@ -1,13 +1,15 @@
 # Open Termkit Documentation
 
-Welcome to the Open Termkit documentation portal. Open Termkit is a production-grade, self-hosted web terminal and developer control plane built with Go, React, wterm, and SQLite.
+Welcome to the Open Termkit documentation portal. Open Termkit is a self-hosted web terminal and developer control plane built with Go, React, wterm, and SQLite.
+
+[Public documentation](https://open-termkit.pages.dev/) · [Contributing](../CONTRIBUTING.md)
 
 ---
 
 ## Table of Contents
 
 ### Getting Started
-- [Quickstart Guide](getting-started/quickstart.md) — Launch Open Termkit in under 2 minutes.
+- [Quickstart Guide](getting-started/quickstart.md) — Build and launch Open Termkit from source.
 - [Architecture Overview](getting-started/architecture.md) — Under the hood: PTY engine, WebSocket protocol, wterm, and SQLite.
 
 ### Step-by-Step Tutorials

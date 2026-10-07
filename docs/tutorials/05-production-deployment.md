@@ -1,5 +1,7 @@
 # Tutorial 5: Production Deployment & Remote Access
 
+> The backend has no built-in authentication or authorization and currently accepts WebSocket connections from any origin. Keep it on loopback. Remote access requires a proxy that authenticates all HTTP and WebSocket routes, restricts origins, and terminates TLS. The proxy examples below require your authentication layer before use. Terminal sessions run with the server user’s permissions. Cloudflare Pages hosts documentation only; it cannot run the Go PTY backend.
+
 This guide covers deploying Open Termkit in production on a remote Linux server using native systemd or Docker, configuring HTTPS reverse proxying with Nginx or Caddy, and adding access control.
 
 ---

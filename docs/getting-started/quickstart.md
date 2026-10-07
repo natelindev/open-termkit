@@ -6,8 +6,8 @@ This guide will walk you through building and running Open Termkit on your local
 
 ## 1. Prerequisites
 
-- **Go 1.22+** (to compile the backend binary)
-- **Node.js 18+ & npm** (only needed when compiling `web/dist`)
+- **Go 1.26+** (to compile the backend binary)
+- **Node.js 22+ & npm** (only needed when compiling `web/dist`)
 - **Git**
 
 Once built, the resulting binary under `bin/open-termkit` is entirely standalone and does not require Node.js or any external web server at runtime.

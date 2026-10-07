@@ -31,12 +31,41 @@ function getInitialLocale(): Locale {
 }
 
 export default function App() {
-  const [activePageId, setActivePageId] = useState<string>("introduction");
+  const [activePageId, setActivePageId] = useState<string>(() => {
+    const id = window.location.hash.slice(1).split("/")[0];
+    return getDocPages("en").some(page => page.id === id) ? id : "introduction";
+  });
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
   const [locale, setLocale] = useState<Locale>(getInitialLocale);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const [id, heading] = window.location.hash.slice(1).split("/");
+      if (getDocPages("en").some(p => p.id === id)) {
+        setActivePageId(id);
+        setIsMobileMenuOpen(false);
+        if (heading) document.getElementById(heading)?.scrollIntoView();
+        else window.scrollTo({ top: 0 });
+      }
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsMobileMenuOpen(false);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    window.addEventListener("keydown", onEscape);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    const heading = window.location.hash.slice(1).split("/")[1];
+    if (heading) document.getElementById(heading)?.scrollIntoView();
+  }, [activePageId, locale]);
 
   const nextTheme = theme === "dark" ? "light" : "dark";
 
@@ -104,12 +133,14 @@ export default function App() {
 
   const handleSelectPage = (id: string) => {
     setActivePageId(id);
+    window.location.hash = id;
     setIsMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <div className="doc-site-root">
+      <a className="doc-skip-link" href="#doc-main">Skip to content</a>
       {/* Top Banner Mesh Accent */}
       <div className="doc-mesh-top-accent" aria-hidden="true" />
 
@@ -121,11 +152,13 @@ export default function App() {
             className="mobile-menu-toggle"
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
             aria-label="Toggle navigation menu"
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="documentation-sidebar"
           >
             <span className="hamburger-icon" />
           </button>
 
-          <a href="#" className="doc-brand" onClick={() => handleSelectPage("introduction")}>
+          <a href="#introduction" className="doc-brand" onClick={() => handleSelectPage("introduction")}>
             <span className="doc-brand-logo" aria-hidden="true" />
             <span className="doc-brand-title">open-termkit</span>
             <span className="doc-version-pill">{locale === "zh" ? "文档" : "docs"}</span>
@@ -169,11 +202,11 @@ export default function App() {
             {locale === "zh" ? "API 参考" : "API"}
           </button>
           <a
-            href="/"
+            href={import.meta.env.VITE_DOCS_STANDALONE === "true" ? "#quickstart" : "/"}
             className="nav-text-link nav-terminal-link"
-            title="Open Open Termkit Web App"
+            title={import.meta.env.VITE_DOCS_STANDALONE === "true" ? "Install Open Termkit on your machine" : "Open Open Termkit Web App"}
           >
-            {locale === "zh" ? "打开终端 ↗" : "Launch Terminal ↗"}
+            {import.meta.env.VITE_DOCS_STANDALONE === "true" ? (locale === "zh" ? "安装终端" : "Install terminal") : (locale === "zh" ? "打开终端 ↗" : "Launch Terminal ↗")}
           </a>
           <a
             href="https://github.com/natelindev/open-termkit"
@@ -186,11 +219,12 @@ export default function App() {
           </a>
 
           {/* Language Switcher Segmented Control */}
-          <div className="doc-lang-segmented" role="radiogroup" aria-label="Language Selector">
+          <div className="doc-lang-segmented" role="group" aria-label="Language Selector">
             <button
               type="button"
               className={`lang-btn ${locale === "en" ? "active" : ""}`}
               onClick={() => setLocale("en")}
+              aria-pressed={locale === "en"}
               title="Switch to English"
             >
               EN
@@ -199,6 +233,7 @@ export default function App() {
               type="button"
               className={`lang-btn ${locale === "zh" ? "active" : ""}`}
               onClick={() => setLocale("zh")}
+              aria-pressed={locale === "zh"}
               title="切换为简体中文"
             >
               中文
@@ -221,7 +256,7 @@ export default function App() {
       {/* Main 3-Column Layout */}
       <div className="doc-body-container">
         {/* Left Sidebar Navigation - NO BADGES / NO TRUNCATION */}
-        <aside className={`doc-left-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
+        <aside id="documentation-sidebar" className={`doc-left-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
           <nav className="doc-sidebar-nav" aria-label="Documentation Categories">
             {categories.map(([category, pages]) => (
               <div key={category} className="doc-nav-section">
@@ -234,6 +269,7 @@ export default function App() {
                       className={`doc-nav-link ${page.id === activePageId ? "active" : ""}`}
                       onClick={() => handleSelectPage(page.id)}
                       title={page.title}
+                      aria-current={page.id === activePageId ? "page" : undefined}
                     >
                       <span className="link-title">{page.navTitle || page.title}</span>
                     </button>
@@ -245,7 +281,7 @@ export default function App() {
         </aside>
 
         {/* Center Main Content Article - ANIMATED FADE IN */}
-        <main className="doc-main-pane">
+        <main id="doc-main" className="doc-main-pane" tabIndex={-1}>
           <div className="doc-article-wrapper" key={`${locale}-${activePage.id}`}>
             <div className="doc-breadcrumbs">
               <span>{locale === "zh" ? "文档" : "Docs"}</span>
@@ -271,6 +307,7 @@ export default function App() {
                   key={idx}
                   block={block}
                   blockId={`${activePage.id}-${idx}`}
+                  pageId={activePage.id}
                   copiedId={copiedId}
                   locale={locale}
                   onCopy={copyCode}
@@ -324,12 +361,14 @@ export default function App() {
 function RenderContentBlock({
   block,
   blockId,
+  pageId,
   copiedId,
   locale,
   onCopy
 }: {
   block: ContentBlock;
   blockId: string;
+  pageId: string;
   copiedId: string | null;
   locale: Locale;
   onCopy: (code: string, id: string) => void;
@@ -341,12 +380,12 @@ function RenderContentBlock({
     case "heading":
       return block.level === 2 ? (
         <h2 id={block.id} className="doc-h2">
-          <a href={`#${block.id}`} className="heading-anchor">#</a>
+          <a href={`#${pageId}/${block.id}`} className="heading-anchor">#</a>
           {block.text}
         </h2>
       ) : (
         <h3 id={block.id} className="doc-h3">
-          <a href={`#${block.id}`} className="heading-anchor">#</a>
+          <a href={`#${pageId}/${block.id}`} className="heading-anchor">#</a>
           {block.text}
         </h3>
       );
@@ -417,6 +456,8 @@ function RenderContentBlock({
         </div>
       );
 
+    case "image":
+      return <figure className="doc-product-screenshot"><img src={block.src} alt={block.alt} width="1440" height="900" /><figcaption>{block.caption}</figcaption></figure>;
     case "component":
       if (block.componentName === "ThemePlayground") {
         return <ThemePlayground />;

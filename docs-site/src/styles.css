@@ -156,8 +156,8 @@ a {
   width: 22px;
   height: 22px;
   background: var(--ink);
-  mask: url("/open-termkit-logo.png") center / contain no-repeat;
-  -webkit-mask: url("/open-termkit-logo.png") center / contain no-repeat;
+  mask: url("/open-termkit-mark.svg") center / contain no-repeat;
+  -webkit-mask: url("/open-termkit-mark.svg") center / contain no-repeat;
 }
 
 .doc-brand-title {
@@ -1145,4 +1145,29 @@ a {
     animation: none !important;
     transition: none !important;
   }
+}
+
+.doc-product-screenshot { margin: 0 0 32px; }
+.doc-product-screenshot img { display: block; width: 100%; height: auto; border: 1px solid var(--hairline); border-radius: 12px; }
+.doc-product-screenshot figcaption { color: var(--mute); font-size: 12px; margin-top: 12px; }
+.doc-skip-link { position: fixed; top: -80px; left: 20px; z-index: 100; background: var(--primary); color: var(--on-primary); padding: 10px 16px; }
+.doc-skip-link:focus { top: 12px; }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 4px; }
+.doc-search-item { width: 100%; text-align: left; font: inherit; color: inherit; }
+.doc-search-close { border: 0; background: transparent; color: var(--body); cursor: pointer; }
+.doc-nav-link.active, .toc-link.active { border-color: var(--hairline); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+
+.doc-search-item { background:transparent; border:0; }
+.doc-search-item.selected { background:var(--hairline-soft); }
+.doc-main-pane, .code-block-inner pre { min-width: 0; }
+@media (max-width: 768px) {
+  .doc-body-container { grid-template-columns: minmax(0, 1fr); }
+  .doc-left-sidebar { display:none; transform:none; }
+  .doc-left-sidebar.mobile-open { display:block; }
+  .doc-top-navbar { padding-inline:12px; gap:8px; }
+  .doc-brand-title { white-space:nowrap; font-size:14px; }
+  .doc-version-pill { display:none; }
+  .nav-left, .nav-right { gap:8px; }
+  .doc-breadcrumbs { flex-wrap:wrap; }
 }

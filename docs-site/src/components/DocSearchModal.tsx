@@ -16,6 +16,7 @@ export function DocSearchModal({
 }) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const results = useMemo(() => {
@@ -35,11 +36,12 @@ export function DocSearchModal({
   }, [query, docPages]);
 
   useEffect(() => {
-    if (isOpen) {
-      setQuery("");
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
+    if (!isOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    setQuery("");
+    setSelectedIndex(0);
+    inputRef.current?.focus();
+    return () => previous?.focus();
   }, [isOpen]);
 
   useEffect(() => {
@@ -72,6 +74,16 @@ export function DocSearchModal({
     <div className="doc-search-backdrop" onClick={onClose}>
       <div
         className="doc-search-modal"
+        ref={dialogRef}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") { event.preventDefault(); onClose(); }
+          if (event.key !== "Tab") return;
+          const controls = dialogRef.current?.querySelectorAll<HTMLElement>("input, button");
+          if (!controls?.length) return;
+          const first = controls[0], last = controls[controls.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -82,13 +94,14 @@ export function DocSearchModal({
           <input
             ref={inputRef}
             type="search"
+            aria-label={locale === "zh" ? "搜索文档" : "Search documentation"}
             className="doc-search-input-field"
             placeholder={locale === "zh" ? "搜索文档、教程、CLI 命令、API..." : "Search guides, tutorials, CLI commands, API..."}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <kbd className="doc-search-kbd" onClick={onClose}>ESC</kbd>
+          <button type="button" className="doc-search-close" aria-label="Close search" onClick={onClose}>ESC</button>
         </div>
 
         <div className="doc-search-list">
@@ -98,7 +111,8 @@ export function DocSearchModal({
             </div>
           ) : (
             results.map((page, idx) => (
-              <div
+              <button
+                type="button"
                 key={page.id}
                 className={`doc-search-item ${idx === selectedIndex ? "selected" : ""}`}
                 onClick={() => {
@@ -112,7 +126,7 @@ export function DocSearchModal({
                   <strong className="doc-search-item-title">{page.title}</strong>
                   <span className="doc-search-item-summary">{page.summary}</span>
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>

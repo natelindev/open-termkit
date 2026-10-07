@@ -5,17 +5,17 @@ IMAGE ?= open-termkit:local
 build: frontend backend
 
 docs-build:
-	cd docs-site && npm install && npm run build
+	cd docs-site && npm ci && npm run build
 
 docs-dev:
-	cd docs-site && npm install && npm run dev
+	cd docs-site && npm ci && npm run dev
 
 docs-preview:
 	cd docs-site && npm run preview
 
 frontend:
-	cd web && npm install && npm run build
-	cd docs-site && npm install && npm run build
+	cd web && npm ci && npm run build
+	cd docs-site && npm ci && npm run build
 	rm -rf web/dist/docs
 	cp -r docs-site/dist web/dist/docs
 
@@ -37,7 +37,7 @@ dev-backend:
 	go run ./cmd/open-termkit serve --port 8765
 
 dev-frontend:
-	cd web && npm install && npm run dev
+	cd web && npm ci && npm run dev
 
 docker-build:
 	@set -eu; \
