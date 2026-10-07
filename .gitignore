@@ -4,8 +4,14 @@ coverage.out
 node_modules/
 web/node_modules/
 web/dist/assets/
+web/dist/docs/
+web/dist/_headers
+web/dist/_redirects
 web/dist/favicon.svg
 web/dist/vite.svg
 web/tsconfig.tsbuildinfo
+docs-site/node_modules/
+docs-site/dist/
+docs-site/tsconfig.tsbuildinfo
 tmp/
 *.log

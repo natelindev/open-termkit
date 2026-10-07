@@ -1,11 +1,23 @@
-.PHONY: build test frontend backend dev dev-backend dev-frontend docker-build docker-run docker-smoke
+.PHONY: build test frontend backend dev dev-backend dev-frontend docker-build docker-run docker-smoke docs-build docs-dev docs-preview
 
 IMAGE ?= open-termkit:local
 
 build: frontend backend
 
+docs-build:
+	cd docs-site && npm install && npm run build
+
+docs-dev:
+	cd docs-site && npm install && npm run dev
+
+docs-preview:
+	cd docs-site && npm run preview
+
 frontend:
 	cd web && npm install && npm run build
+	cd docs-site && npm install && npm run build
+	rm -rf web/dist/docs
+	cp -r docs-site/dist web/dist/docs
 
 backend:
 	go build -o bin/open-termkit ./cmd/open-termkit

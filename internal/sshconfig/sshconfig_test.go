@@ -71,3 +71,30 @@ func TestImportKeyAndWriteConfig(t *testing.T) {
 		t.Fatalf("expected second include call to be idempotent")
 	}
 }
+
+func TestGenerateKey(t *testing.T) {
+	root := t.TempDir()
+	paths := app.Paths{
+		HomeDir:       root,
+		SSHDir:        filepath.Join(root, ".ssh"),
+		SSHManagedDir: filepath.Join(root, ".ssh", "open-termkit"),
+	}
+	keyPath, pubKey, err := sshconfig.GenerateKey(paths, "test_ed25519", "test@open-termkit")
+	if err != nil {
+		t.Skipf("ssh-keygen not available or failed: %v", err)
+	}
+	if keyPath == "" || pubKey == "" {
+		t.Fatalf("expected keyPath and pubKey, got %q, %q", keyPath, pubKey)
+	}
+	info, err := os.Stat(keyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("expected 0600 key permissions, got %v", info.Mode().Perm())
+	}
+	if !strings.HasPrefix(pubKey, "ssh-ed25519") {
+		t.Fatalf("expected ssh-ed25519 public key, got %q", pubKey)
+	}
+}
+

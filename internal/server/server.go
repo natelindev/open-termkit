@@ -11,7 +11,11 @@ import (
 	"mime/multipart"
 	"net"
 	"net/http"
+	"os"
+	"os/exec"
 	"path"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,10 +31,11 @@ import (
 )
 
 type Server struct {
-	store  *store.Store
-	paths  app.Paths
-	static fs.FS
-	mux    *http.ServeMux
+	store     *store.Store
+	paths     app.Paths
+	static    fs.FS
+	mux       *http.ServeMux
+	startTime time.Time
 }
 
 func New(s *store.Store, paths app.Paths) (*Server, error) {
@@ -39,17 +44,26 @@ func New(s *store.Store, paths app.Paths) (*Server, error) {
 		return nil, err
 	}
 	srv := &Server{
-		store:  s,
-		paths:  paths,
-		static: static,
-		mux:    http.NewServeMux(),
+		store:     s,
+		paths:     paths,
+		static:    static,
+		mux:       http.NewServeMux(),
+		startTime: time.Now(),
 	}
 	srv.routes()
 	return srv, nil
 }
 
 func (s *Server) Handler() http.Handler {
-	return s.mux
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				writeErrorStatus(w, http.StatusInternalServerError, fmt.Errorf("internal server error: %v", rec))
+			}
+		}()
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		s.mux.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) ListenAndServe(ctx context.Context, host string, port int) (string, error) {
@@ -73,9 +87,12 @@ func (s *Server) ListenAndServe(ctx context.Context, host string, port int) (str
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("/api/health", s.health)
+	s.mux.HandleFunc("/api/doctor", s.doctor)
 	s.mux.HandleFunc("/api/settings", s.settings)
 	s.mux.HandleFunc("/api/profiles", s.profiles)
 	s.mux.HandleFunc("/api/profiles/", s.profileByID)
+	s.mux.HandleFunc("/api/ssh/test", s.testSSHConnection)
+	s.mux.HandleFunc("/api/ssh/generate-key", s.generateSSHKey)
 	s.mux.HandleFunc("/api/ssh/import-key", s.importSSHKey)
 	s.mux.HandleFunc("/api/ssh/write-config", s.writeSSHConfig)
 	s.mux.HandleFunc("/api/ssh", s.sshProfiles)
@@ -208,10 +225,181 @@ func (s *Server) sshProfiles(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) doctor(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	ctx := r.Context()
+	profiles, _ := s.store.ListTerminalProfiles(ctx)
+	sshProfiles, _ := s.store.ListSSHProfiles(ctx)
+	detected := tools.Detect(ctx, tools.Catalog())
+
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
+
+	dbStat, _ := os.Stat(s.paths.DBPath)
+	dbSize := int64(0)
+	dbExists := false
+	if dbStat != nil {
+		dbSize = dbStat.Size()
+		dbExists = true
+	}
+
+	sshConfigStat, _ := os.Stat(s.paths.SSHUserConfig)
+	sshConfigExists := sshConfigStat != nil
+
+	sshManagedStat, _ := os.Stat(s.paths.SSHManagedConfig)
+	sshManagedExists := sshManagedStat != nil
+
+	shells := make(map[string]bool)
+	for _, sh := range []string{"zsh", "bash", "fish", "sh"} {
+		if path, err := exec.LookPath(sh); err == nil && path != "" {
+			shells[sh] = true
+		} else {
+			shells[sh] = false
+		}
+	}
+
+	managedKeysCount := 0
+	if entries, err := os.ReadDir(s.paths.SSHManagedDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && !strings.HasSuffix(e.Name(), ".pub") && e.Name() != "config" {
+				managedKeysCount++
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"os":            runtime.GOOS,
+		"arch":          runtime.GOARCH,
+		"goVersion":     runtime.Version(),
+		"numCPU":        runtime.NumCPU(),
+		"numGoroutine":  runtime.NumGoroutine(),
+		"uptimeSeconds": int64(time.Since(s.startTime).Seconds()),
+		"memory": map[string]any{
+			"allocMB":      float64(mem.Alloc) / (1024 * 1024),
+			"totalAllocMB": float64(mem.TotalAlloc) / (1024 * 1024),
+			"sysMB":        float64(mem.Sys) / (1024 * 1024),
+			"numGC":        mem.NumGC,
+		},
+		"paths": s.paths,
+		"database": map[string]any{
+			"exists":    dbExists,
+			"sizeBytes": dbSize,
+		},
+		"terminalProfilesCount": len(profiles),
+		"sshProfilesCount":      len(sshProfiles),
+		"tools":                 detected,
+		"shells":                shells,
+		"sshStatus": map[string]any{
+			"userConfigExists":    sshConfigExists,
+			"managedConfigExists": sshManagedExists,
+			"managedKeysCount":    managedKeysCount,
+		},
+	})
+}
+
+func (s *Server) testSSHConnection(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
+		methodNotAllowed(w)
+		return
+	}
+	var body struct {
+		Host           string `json:"host"`
+		Port           int    `json:"port"`
+		TimeoutSeconds int    `json:"timeoutSeconds"`
+	}
+	if r.Method == http.MethodPost {
+		_ = decodeJSON(r, &body)
+	}
+	if body.Host == "" {
+		body.Host = r.URL.Query().Get("host")
+	}
+	if body.Port <= 0 {
+		if p, err := strconv.Atoi(r.URL.Query().Get("port")); err == nil {
+			body.Port = p
+		} else {
+			body.Port = 22
+		}
+	}
+	timeout := 3 * time.Second
+	if body.TimeoutSeconds > 0 {
+		timeout = time.Duration(body.TimeoutSeconds) * time.Second
+	}
+	s.performSSHTest(w, body.Host, body.Port, timeout)
+}
+
+func (s *Server) performSSHTest(w http.ResponseWriter, host string, port int, timeout time.Duration) {
+	if host == "" {
+		writeErrorStatus(w, http.StatusBadRequest, errors.New("host is required"))
+		return
+	}
+	if port <= 0 {
+		port = 22
+	}
+	start := time.Now()
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
+	conn, err := net.DialTimeout("tcp", addr, timeout)
+	latencyMs := time.Since(start).Milliseconds()
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"reachable": false,
+			"host":      host,
+			"port":      port,
+			"latencyMs": latencyMs,
+			"error":     err.Error(),
+		})
+		return
+	}
+	_ = conn.Close()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"reachable": true,
+		"host":      host,
+		"port":      port,
+		"latencyMs": latencyMs,
+	})
+}
+
+func (s *Server) generateSSHKey(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	var body struct {
+		Name    string `json:"name"`
+		Comment string `json:"comment"`
+	}
+	_ = decodeJSON(r, &body)
+	keyPath, pubKey, err := sshconfig.GenerateKey(s.paths, body.Name, body.Comment)
+	if err != nil {
+		writeErrorStatus(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"path":      keyPath,
+		"publicKey": pubKey,
+	})
+}
+
 func (s *Server) sshProfileByID(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/ssh/")
 	if id == "" {
 		writeErrorStatus(w, http.StatusNotFound, errors.New("ssh profile id is required"))
+		return
+	}
+	if strings.HasSuffix(id, "/test") {
+		if r.Method != http.MethodPost && r.Method != http.MethodGet {
+			methodNotAllowed(w)
+			return
+		}
+		profileID := strings.TrimSuffix(id, "/test")
+		p, err := s.store.GetSSHProfile(r.Context(), profileID)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		s.performSSHTest(w, p.Host, p.Port, 3*time.Second)
 		return
 	}
 	switch r.Method {
@@ -442,6 +630,24 @@ func (s *Server) staticFile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		methodNotAllowed(w)
 		return
+	}
+	if r.URL.Path == "/docs" {
+		http.Redirect(w, r, "/docs/", http.StatusFound)
+		return
+	}
+	if r.URL.Path == "/docs/" || strings.HasPrefix(r.URL.Path, "/docs/") {
+		sub := strings.TrimPrefix(r.URL.Path, "/docs/")
+		if sub == "" {
+			sub = "index.html"
+		}
+		target := path.Join("docs", path.Clean("/"+sub))
+		if _, err := fs.Stat(s.static, target); err != nil {
+			target = "docs/index.html"
+		}
+		if _, err := fs.Stat(s.static, target); err == nil {
+			http.ServeFileFS(w, r, s.static, target)
+			return
+		}
 	}
 	name := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
 	if name == "." || name == "" {

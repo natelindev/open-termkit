@@ -8,7 +8,10 @@ import (
 
 func TestCatalogContainsCoreTools(t *testing.T) {
 	catalog := tools.Catalog()
-	want := map[string]bool{"tmux": false, "codex": false, "claude": false, "opencode": false, "pi": false}
+	want := map[string]bool{
+		"tmux": false, "codex": false, "claude": false, "opencode": false, "pi": false,
+		"git": false, "gh": false, "docker": false, "ripgrep": false, "fzf": false, "htop": false,
+	}
 	for _, tool := range catalog {
 		if _, ok := want[tool.Name]; ok {
 			want[tool.Name] = true

@@ -4,11 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <title>open-termkit</title>
+    <title>Open Termkit Documentation | Production Web Terminal</title>
+    <meta
+      name="description"
+      content="Official documentation for Open Termkit: Production-grade self-hosted terminal environment built with Go, React, wterm, and SQLite."
+    />
     <script>
       (() => {
         try {
-          const key = "open-termkit-theme";
+          const key = "open-termkit-docs-theme";
           const stored = window.localStorage.getItem(key);
           const theme =
             stored === "light" || stored === "dark"
@@ -19,15 +23,13 @@
           document.documentElement.dataset.theme = theme;
           document.documentElement.style.colorScheme = theme;
         } catch {
-          document.documentElement.dataset.theme = "light";
-          document.documentElement.style.colorScheme = "light";
+          // ignore
         }
       })();
     </script>
-    <script type="module" crossorigin src="/assets/index-DrOv0fVH.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-CNIlIqOF.css">
   </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

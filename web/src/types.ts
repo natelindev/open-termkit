@@ -51,3 +51,53 @@ export type SettingsResponse = {
   settings: Record<string, unknown>;
 };
 
+export type DoctorResponse = {
+  os: string;
+  arch: string;
+  goVersion: string;
+  numCPU: number;
+  numGoroutine: number;
+  uptimeSeconds: number;
+  memory: {
+    allocMB: number;
+    totalAllocMB: number;
+    sysMB: number;
+    numGC: number;
+  };
+  paths: Record<string, string>;
+  database: {
+    exists: boolean;
+    sizeBytes: number;
+  };
+  terminalProfilesCount: number;
+  sshProfilesCount: number;
+  tools: Tool[];
+  shells: Record<string, boolean>;
+  sshStatus: {
+    userConfigExists: boolean;
+    managedConfigExists: boolean;
+    managedKeysCount: number;
+  };
+};
+
+export type SSHTestResult = {
+  reachable: boolean;
+  host: string;
+  port: number;
+  latencyMs?: number;
+  error?: string;
+};
+
+export type SSHGenerateKeyResult = {
+  path: string;
+  publicKey: string;
+};
+
+export type TerminalTab = {
+  id: string;
+  title: string;
+  profileId: string;
+  fontSize: number;
+  followOutput: boolean;
+  createdAt: number;
+};

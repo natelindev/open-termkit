@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -77,6 +78,42 @@ func ImportKey(paths app.Paths, r io.Reader, preferredName string) (string, erro
 		return "", err
 	}
 	return target, nil
+}
+
+func GenerateKey(paths app.Paths, preferredName string, comment string) (string, string, error) {
+	if err := os.MkdirAll(paths.SSHManagedDir, 0o700); err != nil {
+		return "", "", err
+	}
+	name := SafeKeyName(preferredName)
+	if name == "" || name == "imported-key" {
+		name = "id_ed25519"
+	}
+	target := filepath.Join(paths.SSHManagedDir, name)
+	if _, err := os.Stat(target); err == nil {
+		ext := filepath.Ext(name)
+		stem := strings.TrimSuffix(name, ext)
+		for i := 1; ; i++ {
+			candidate := filepath.Join(paths.SSHManagedDir, fmt.Sprintf("%s-%d%s", stem, i, ext))
+			if _, err := os.Stat(candidate); os.IsNotExist(err) {
+				target = candidate
+				break
+			}
+		}
+	}
+	if comment == "" {
+		comment = "open-termkit"
+	}
+	cmd := exec.Command("ssh-keygen", "-t", "ed25519", "-f", target, "-N", "", "-C", comment)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", "", fmt.Errorf("ssh-keygen failed: %w (%s)", err, strings.TrimSpace(string(out)))
+	}
+	_ = os.Chmod(target, 0o600)
+	pubBytes, err := os.ReadFile(target + ".pub")
+	if err != nil {
+		return target, "", nil
+	}
+	return target, strings.TrimSpace(string(pubBytes)), nil
 }
 
 func WriteManagedConfig(paths app.Paths, profiles []models.SSHProfile) error {
