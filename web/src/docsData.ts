@@ -1,7 +1,8 @@
 export type DocSection = {
   id: string;
-  category: "Getting Started" | "Tutorials" | "Guides & Reference";
+  category: string;
   title: string;
+  navTitle?: string;
   summary: string;
   badge?: string;
   content: DocBlock[];
@@ -15,13 +16,13 @@ export type DocBlock =
   | { type: "list"; items: string[] }
   | { type: "table"; headers: string[]; rows: string[][] };
 
-export const docsSections: DocSection[] = [
+export const docsSectionsEn: DocSection[] = [
   {
     id: "introduction",
     category: "Getting Started",
     title: "Introduction to Open Termkit",
+    navTitle: "Introduction & Overview",
     summary: "Overview of Open Termkit, core philosophy, and architecture.",
-    badge: "Overview",
     content: [
       {
         type: "paragraph",
@@ -52,23 +53,15 @@ export const docsSections: DocSection[] = [
       {
         type: "heading",
         level: 2,
-        text: "System Architecture"
-      },
-      {
-        type: "paragraph",
-        text: "The backend server provides WebSocket endpoints connected directly to OS pseudo-terminals (PTYs) via creack/pty. Frontend rendering is handled by the high-performance wterm engine via @wterm/react and @wterm/dom."
+        text: "Architecture at a Glance"
       },
       {
         type: "code",
         language: "text",
-        title: "Data Flow Diagram",
-        code: `[Browser Client]
-  └── React UI + wterm Virtual Terminal
-        │
+        title: "System Architecture",
+        code: `[ Web Browser UI ] ──(WebSocket)──> /api/terminals/ws ──> creack/pty ──> Host Shell (zsh/bash/tmux)
         ├── (HTTP REST API) ──> Go Router ──> SQLite DB (~/.open-termkit/open-termkit.db)
-        │                                  ──> Managed SSH (~/.ssh/open-termkit/config)
-        │
-        └── (WebSocket /ws) ──> PTY WS Handler ──> creack/pty ──> Local Shell (zsh/bash/tmux)`
+        └── (SSH Manager) ────> ~/.ssh/open-termkit/config (Ed25519 Keys)`
       }
     ]
   },
@@ -76,28 +69,37 @@ export const docsSections: DocSection[] = [
     id: "quickstart",
     category: "Getting Started",
     title: "Quickstart Guide",
-    summary: "Get Open Termkit up and running in under two minutes.",
-    badge: "Start Here",
+    navTitle: "Quickstart Guide",
+    summary: "Build and run Open Termkit in under two minutes.",
     content: [
       {
         type: "paragraph",
-        text: "Follow these steps to launch Open Termkit on your local machine or remote server."
+        text: "Open Termkit can be compiled from source using Go and Node, or run via pre-built binaries and Docker containers."
       },
       {
         type: "heading",
         level: 2,
-        text: "1. Build and Run from Source"
+        text: "1. Prerequisites"
       },
       {
-        type: "paragraph",
-        text: "Prerequisites: Go 1.22+ and Node.js 18+ (for frontend build). Once built, the binary requires no Node runtime."
+        type: "list",
+        items: [
+          "Go 1.22 or newer",
+          "Node.js 18 or newer (only needed during frontend compilation)",
+          "A POSIX-compliant shell environment (macOS or Linux recommended)"
+        ]
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "2. Build & Launch from Source"
       },
       {
         type: "code",
         language: "bash",
         title: "Terminal",
         code: `# Clone repository
-git clone https://github.com/open-termkit/open-termkit.git
+git clone https://github.com/natelindev/open-termkit.git
 cd open-termkit
 
 # Build embedded binary
@@ -108,28 +110,22 @@ make build
       },
       {
         type: "paragraph",
-        text: "Open your browser to http://127.0.0.1:8765. Your default local shell (Zsh or Bash) will be pre-configured."
+        text: "Once started, open your browser to http://127.0.0.1:8765 to begin managing your terminals."
       },
       {
         type: "heading",
         level: 2,
-        text: "2. Quick CLI Setup"
+        text: "3. Automated System Setup"
       },
       {
         type: "paragraph",
-        text: "Run the setup command to automatically detect installed shells, tmux, and developer utilities:"
+        text: "Run the CLI setup command to detect installed developer tools and initialize recommended default profiles:"
       },
       {
         type: "code",
         language: "bash",
         title: "Terminal",
         code: `./bin/open-termkit setup`
-      },
-      {
-        type: "callout",
-        variant: "note",
-        title: "Docker Alternative",
-        text: "You can also run Open Termkit via Docker with pre-packaged OpenSSH: 'make docker-run' or 'docker run -p 8765:8765 -v open-termkit-data:/home/open-termkit/.open-termkit open-termkit:local'."
       }
     ]
   },
@@ -137,498 +133,553 @@ make build
     id: "tutorial-multi-tab",
     category: "Tutorials",
     title: "Tutorial 1: Multi-Tab Terminal Sessions",
-    summary: "Master concurrent terminal sessions, tab lifecycle, and productivity controls.",
-    badge: "Tutorial",
+    navTitle: "1. Multi-Tab Terminals",
+    summary: "Managing concurrent sessions, background tabs, and real-time controls.",
     content: [
       {
         type: "paragraph",
-        text: "Open Termkit includes a multi-tab session manager that maintains background PTY processes while you switch tasks. Background tabs remain connected and continue receiving command output."
+        text: "Open Termkit provides tabbed terminal workspaces that allow developers to keep multiple interactive shell sessions running in parallel."
       },
       {
         type: "heading",
         level: 2,
-        text: "Managing Tabs"
+        text: "1. Creating and Managing Tabs"
       },
       {
         type: "list",
         items: [
-          "Create a Tab: Click the '+' button in the terminal header. To choose a specific profile, use the dropdown arrow next to '+'.",
-          "Switch Tabs: Click any tab tab in the top tab bar. Background tabs preserve their full terminal state and scrollback.",
-          "Rename a Tab: Double-click any tab title to edit it inline, or press Enter when focused to save.",
-          "Close a Tab: Click the '×' button on the tab. The associated backend PTY session is terminated cleanly."
+          "Click '+' on the terminal tab bar to spawn a new shell session using your default profile.",
+          "Click the chevron '▾' button to select a specific profile (such as Zsh, Bash, tmux, or an AI agent).",
+          "Double-click any tab title to edit its name inline.",
+          "Click the '×' button to close a tab and terminate its backend process.",
+          "Background tabs remain fully active and never drop WebSocket connections while switching views."
         ]
       },
       {
         type: "heading",
         level: 2,
-        text: "Terminal Control Bar"
-      },
-      {
-        type: "paragraph",
-        text: "Each terminal tab has an interactive quick-action toolbar located on the right side of the frame:"
+        text: "2. Interactive Controls"
       },
       {
         type: "table",
-        headers: ["Action", "Icon / Control", "Description"],
+        headers: ["Control", "Shortcut", "Description"],
         rows: [
-          ["Clear Screen", "Clear button", "Clears the terminal viewport buffer."],
-          ["Restart Session", "Restart button", "Closes the current PTY connection and opens a fresh shell session."],
-          ["Font Scaling", "A- / A+", "Adjusts terminal font size in real time (from 11px to 22px)."],
-          ["Follow Output", "Lock / Down Arrow", "Toggles auto-scrolling to bottom when new command output arrives."],
-          ["Zen Fullscreen", "Expand / Maximize", "Expands the terminal canvas to fill the entire window viewport."]
+          ["Clear Screen", "Clear / Ctrl+L", "Clears the active terminal viewport."],
+          ["Restart Session", "Restart", "Gracefully kills the current shell and restarts a fresh process."],
+          ["Font Scaling", "A- / A+", "Scales terminal font size between 10px and 24px dynamically."],
+          ["Follow Output", "Follow: On / Off", "Toggles auto-scrolling to the bottom as new stdout arrives."],
+          ["Zen Mode", "Fullscreen Icon", "Expands the terminal viewport to take over the full window."]
         ]
       },
       {
         type: "heading",
         level: 2,
-        text: "Command Palette (Cmd+K / Ctrl+K)"
+        text: "3. Quick Switching via Command Palette"
       },
       {
         type: "paragraph",
-        text: "Press Cmd+K (macOS) or Ctrl+K (Linux/Windows) at any time to summon the Command Palette. You can jump directly to open tabs, launch tools, connect to SSH hosts, or toggle theme modes instantly."
+        text: "Press Cmd+K (macOS) or Ctrl+K (Linux/Windows) at any time to open the Command Palette. Type tab numbers or profile names to jump between open tabs without reaching for your mouse."
       }
     ]
   },
   {
-    id: "tutorial-ssh-management",
+    id: "tutorial-ssh",
     category: "Tutorials",
-    title: "Tutorial 2: SSH Keys & 1-Click Remote Connections",
-    summary: "Generate Ed25519 keys, manage hosts, test latency, and connect instantly.",
-    badge: "Tutorial",
+    title: "Tutorial 2: SSH Keys & Remote Hosts",
+    navTitle: "2. SSH Keys & Remote Hosts",
+    summary: "Generating keys, configuring remote boxes, and testing network latency.",
     content: [
       {
         type: "paragraph",
-        text: "Open Termkit provides an SSH profile manager that writes standard OpenSSH config files while offering a web-based connection workflow."
+        text: "The SSH view enables seamless remote server management with full integration into standard ~/.ssh configurations."
       },
       {
         type: "heading",
         level: 2,
-        text: "Step 1: Generate an Ed25519 Key Pair"
+        text: "1. In-App Key Generation"
       },
       {
         type: "paragraph",
-        text: "Instead of manually creating keys in the terminal, you can generate modern Ed25519 keys directly in the SSH view:"
+        text: "Generate secure Ed25519 key pairs directly within Open Termkit without running external terminal commands:"
       },
       {
         type: "list",
         items: [
-          "Navigate to the SSH view from the primary navigation.",
-          "Click 'Generate Key Pair'.",
-          "Provide a key name (e.g., 'id_ed25519_prod') and a comment identifier.",
-          "Open Termkit securely generates the key pair in '~/.ssh/open-termkit/' with 0600 permissions.",
-          "Copy the displayed public key to add to your remote server's '~/.ssh/authorized_keys'."
+          "Navigate to the SSH view and click 'Generate Key'.",
+          "Enter a key filename (e.g. id_ed25519_prod) and optional comment.",
+          "The private key is written to ~/.ssh/open-termkit/ with secure 0600 permissions.",
+          "Click 'Copy' next to the public key to append it to your remote server's authorized_keys."
         ]
       },
       {
         type: "heading",
         level: 2,
-        text: "Step 2: Add and Test Remote Hosts"
+        text: "2. Managing Hosts & 1-Click Connect"
       },
       {
         type: "paragraph",
-        text: "Fill in the SSH Profile form with Host, User, Port (default 22), Identity File, and optional ProxyJump jump host. Once saved:"
+        text: "Add remote hosts with hostname, port, username, identity file, and optional ProxyJump. Each host card provides:"
       },
       {
         type: "list",
         items: [
-          "Click 'Test' on any profile card to verify network reachability. Open Termkit tests TCP connectivity and displays round-trip ping latency.",
-          "Click 'Connect' to immediately spawn a new terminal tab running 'ssh <profile>'."
+          "Test: Performs a live TCP reachability check and displays ping latency in milliseconds.",
+          "Connect: Automatically spawns a new terminal tab running 'ssh <profile>' with all configured flags.",
+          "Edit: Modify parameters or switch keys with instant validation."
         ]
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Step 3: Writing Managed SSH Config"
-      },
-      {
-        type: "paragraph",
-        text: "Click 'Write Config' to generate '~/.ssh/open-termkit/config'. Enable the 'Include in ~/.ssh/config' checkbox to automatically add an 'Include ~/.ssh/open-termkit/config' line to your user's main SSH configuration."
-      },
-      {
-        type: "code",
-        language: "ssh-config",
-        title: "~/.ssh/open-termkit/config",
-        code: `# Managed by open-termkit. Edit profiles in open-termkit instead of this file.
-
-Host prod-app
-  HostName app.production.internal
-  User ubuntu
-  Port 2222
-  IdentityFile ~/.ssh/open-termkit/id_ed25519_prod
-  IdentitiesOnly yes`
       }
     ]
   },
   {
-    id: "tutorial-ai-agents",
+    id: "tutorial-agents",
     category: "Tutorials",
-    title: "Tutorial 3: Setting Up AI Coding Agents",
-    summary: "Integrate Claude Code, OpenAI Codex, OpenCode, and Pi in your terminal.",
-    badge: "Tutorial",
+    title: "Tutorial 3: AI Coding Agents",
+    navTitle: "3. AI Coding Assistants",
+    summary: "Provisioning and running Claude Code, Codex, OpenCode, and Pi.",
     content: [
       {
         type: "paragraph",
-        text: "Open Termkit is optimized for developers using autonomous AI coding agents. The Tools catalog automatically scans for installed CLI agents and provides 1-click installation and launch profiles."
+        text: "Open Termkit is purpose-built to accelerate workflows with terminal-based autonomous AI coding agents."
       },
       {
         type: "heading",
         level: 2,
-        text: "Supported Agents & Detection"
+        text: "1. Supported Coding Agents"
       },
       {
         type: "table",
-        headers: ["Agent", "Binary", "Install Command", "Category"],
+        headers: ["Agent", "Command", "Description"],
         rows: [
-          ["Claude Code", "claude", "npm install -g @anthropic-ai/claude-code", "AI Agent"],
-          ["Codex CLI", "codex", "npm install -g @openai/codex", "AI Agent"],
-          ["OpenCode", "opencode", "npm install -g opencode-ai", "AI Agent"],
-          ["Pi", "pi", "npm install -g @earendil-works/pi-coding-agent", "AI Agent"]
+          ["Claude Code", "claude", "Anthropic's terminal agent for file editing and git operations."],
+          ["Codex CLI", "codex", "OpenAI command-line assistant."],
+          ["OpenCode", "opencode", "Open-source extensible terminal agent."],
+          ["Pi", "pi", "Minimalist AI pair programmer."]
         ]
       },
       {
         type: "heading",
         level: 2,
-        text: "Launching an Agent"
+        text: "2. One-Click Safe Installation"
       },
       {
         type: "paragraph",
-        text: "In the Tools view, click 'Launch' on any installed agent card. Open Termkit automatically creates a dedicated terminal profile and opens an interactive terminal session running the agent inside the wterm environment."
-      },
-      {
-        type: "callout",
-        variant: "tip",
-        title: "Environment Variables for Agents",
-        text: "To configure API keys (such as ANTHROPIC_API_KEY or OPENAI_API_KEY), navigate to the Profiles view, edit the agent profile, and add your keys in the Environment Variables section."
+        text: "In the Tools view, Open Termkit scans PATH to detect installed agents. For uninstalled agents, click 'Install' to view an interactive modal with the installation command, followed by real-time streaming installer logs."
       }
     ]
   },
   {
-    id: "tutorial-tmux-workspaces",
+    id: "tutorial-tmux",
     category: "Tutorials",
-    title: "Tutorial 4: Persistent Workspaces with Tmux",
-    summary: "Keep processes running across browser reloads and network disconnects.",
-    badge: "Tutorial",
+    title: "Tutorial 4: Persistent Sessions with Tmux",
+    navTitle: "4. Persistent Sessions (tmux)",
+    summary: "Prevent disconnected processes and maintain resilient terminal sessions.",
     content: [
       {
         type: "paragraph",
-        text: "While Open Termkit maintains WebSocket connections during normal tab navigation, running long tasks (like Docker builds, test suites, or training runs) is best handled by tmux. With tmux, even if your browser closes, your shell process continues running on the host."
+        text: "For long-running tasks like remote compilations, model fine-tuning, or servers, Open Termkit provides built-in tmux session persistence."
       },
       {
         type: "heading",
         level: 2,
-        text: "Configuring the Tmux Preset"
+        text: "1. Built-in Tmux Preset"
       },
       {
         type: "paragraph",
-        text: "Open Termkit ships with a built-in tmux preset profile that runs:"
+        text: "Open Termkit ships with a default profile configured as:"
       },
       {
         type: "code",
         language: "bash",
-        title: "Preset Profile Command",
-        code: `tmux new-session -A -s main`
+        title: "Tmux Command",
+        code: "tmux new-session -A -s main"
       },
       {
         type: "paragraph",
-        text: "The '-A' flag instructs tmux to attach to the existing 'main' session if it already exists, or create it if it does not. This means every time you open this profile, you instantly resume your exact workspace."
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Essential Tmux Shortcuts"
-      },
-      {
-        type: "list",
-        items: [
-          "Prefix key: Ctrl+b",
-          "Split horizontal: Ctrl+b %",
-          "Split vertical: Ctrl+b \"",
-          "Switch panes: Ctrl+b Arrow keys",
-          "Detach session: Ctrl+b d"
-        ]
+        text: "The '-A' flag instructs tmux to attach to an existing session named 'main' if it exists, or create it if it does not. If your browser disconnects, your workspace remains running on the host."
       }
     ]
   },
   {
-    id: "tutorial-production-deploy",
-    category: "Tutorials",
-    title: "Tutorial 5: Production Deployment & Reverse Proxy",
-    summary: "Deploy Open Termkit natively with systemd, Docker, and Nginx/Caddy TLS.",
-    badge: "Tutorial",
-    content: [
-      {
-        type: "paragraph",
-        text: "Learn how to deploy Open Termkit in production environments with persistent storage, non-root security isolation, and HTTPS reverse proxying."
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Option A: Native Systemd Deployment"
-      },
-      {
-        type: "paragraph",
-        text: "For native Linux hosts (Debian, Ubuntu, Arch, RHEL), use the deployment script to install the binary and systemd service:"
-      },
-      {
-        type: "code",
-        language: "bash",
-        title: "Deploying via SSH",
-        code: `# Deploy to remote Linux server as dedicated non-root user
-scripts/deploy-systemd.sh user@your-server.com
-
-# Inspect service status
-ssh user@your-server.com "sudo systemctl status open-termkit"`
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Option B: Production Docker Deployment"
-      },
-      {
-        type: "code",
-        language: "bash",
-        title: "Docker Run",
-        code: `docker run -d --name open-termkit \\
-  --restart unless-stopped \\
-  -p 127.0.0.1:8765:8765 \\
-  -v open-termkit-data:/home/open-termkit/.open-termkit \\
-  -v open-termkit-ssh:/home/open-termkit/.ssh \\
-  open-termkit:local`
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Reverse Proxy Configuration (Nginx)"
-      },
-      {
-        type: "paragraph",
-        text: "To safely expose Open Termkit behind HTTPS, configure WebSocket proxying in Nginx:"
-      },
-      {
-        type: "code",
-        language: "nginx",
-        title: "/etc/nginx/sites-available/termkit.conf",
-        code: `server {
-    listen 443 ssl http2;
-    server_name term.yourdomain.com;
-
-    ssl_certificate /etc/letsencrypt/live/term.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/term.yourdomain.com/privkey.pem;
-
-    location / {
-        proxy_pass http://127.0.0.1:8765;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket timeout
-        proxy_read_timeout 86400s;
-        proxy_send_timeout 86400s;
-    }
-}`
-      },
-      {
-        type: "callout",
-        variant: "warning",
-        title: "Authentication Recommendation",
-        text: "Always place Open Termkit behind an authenticated access layer such as Tailscale, Cloudflare Access, or HTTP Basic Auth when exposing it to public networks."
-      }
-    ]
-  },
-  {
-    id: "tutorial-customization",
-    category: "Tutorials",
-    title: "Tutorial 6: Customizing Themes & Terminal Font",
-    summary: "Configure 12 color schemes, custom fonts, and wterm settings.",
-    badge: "Tutorial",
-    content: [
-      {
-        type: "paragraph",
-        text: "Open Termkit provides first-class terminal theming with 12 handcrafted color schemes optimized for readability in both light and dark ambient lighting."
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Available Terminal Schemes"
-      },
-      {
-        type: "list",
-        items: [
-          "Monokai (Default high-contrast developer theme)",
-          "Tokyo Night (Cool midnight indigo palette)",
-          "Catppuccin Mocha (Soothing pastel dark aesthetic)",
-          "Dracula (Vibrant cyberpunk gothic palette)",
-          "Nord (Arctic blue minimalist tones)",
-          "Gruvbox Dark (Warm retro earth tones)",
-          "One Dark (Atom editor inspired balanced palette)",
-          "GitHub Dark (Clean low-saturation chrome)",
-          "Rose Pine (Rosy muted aesthetic)",
-          "Solarized Dark & Solarized Light",
-          "Light (High-contrast paper reading scheme)"
-        ]
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Switching Schemes"
-      },
-      {
-        type: "paragraph",
-        text: "You can switch color schemes globally using the 'Scheme' dropdown in the top bar, or customize each profile independently in the Profiles view."
-      }
-    ]
-  },
-  {
-    id: "tutorial-sync-bundle",
-    category: "Tutorials",
-    title: "Tutorial 7: Sync Bundles & Team Workflows",
-    summary: "Export profiles, backup databases, and migrate to new machines.",
-    badge: "Tutorial",
-    content: [
-      {
-        type: "paragraph",
-        text: "Open Termkit includes a zero-leak sync bundle mechanism. You can export all your terminal profiles, SSH host configurations, and settings to a JSON bundle to import on another machine."
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Private Key Safety Guarantee"
-      },
-      {
-        type: "paragraph",
-        text: "Sync bundles strictly export metadata and file paths; private key contents are never embedded into export bundles, ensuring credentials are never accidentally committed to git or exposed."
-      },
-      {
-        type: "heading",
-        level: 2,
-        text: "Exporting and Importing via CLI"
-      },
-      {
-        type: "code",
-        language: "bash",
-        title: "Terminal",
-        code: `# Export bundle to file
-open-termkit sync export --file my-termkit-backup.json
-
-# Import bundle on a new workstation
-open-termkit sync import --file my-termkit-backup.json`
-      }
-    ]
-  },
-  {
-    id: "cli-reference",
+    id: "reference-cli-api",
     category: "Guides & Reference",
-    title: "CLI Command Reference",
-    summary: "Complete reference for the open-termkit command line interface.",
-    badge: "Reference",
+    title: "Reference: CLI & REST API",
+    navTitle: "5. CLI & REST API",
+    summary: "Command line arguments, flags, and HTTP endpoints.",
     content: [
       {
         type: "paragraph",
-        text: "The 'open-termkit' binary includes a rich command-line interface powered by Cobra."
+        text: "Open Termkit includes a complete CLI and JSON REST API for scripting and external integrations."
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "1. CLI Commands"
       },
       {
         type: "table",
         headers: ["Command", "Flags", "Description"],
         rows: [
-          ["open-termkit serve", "--host, --port", "Starts the web server, API, and WebSocket handler (default port 8765)."],
-          ["open-termkit setup", "", "Runs automatic detection and creates preset terminal profiles."],
-          ["open-termkit doctor", "", "Prints full system diagnostics, path statuses, and memory statistics."],
-          ["open-termkit profile list", "", "Lists all terminal profiles stored in SQLite."],
-          ["open-termkit profile create", "--name, --shell, --arg, --cwd, --theme", "Creates a new terminal profile."],
-          ["open-termkit profile update <id>", "--name, --shell, --cwd, etc.", "Updates an existing terminal profile."],
-          ["open-termkit profile delete <id>", "", "Deletes a terminal profile."],
-          ["open-termkit ssh list", "", "Lists all configured SSH profiles."],
-          ["open-termkit ssh create", "--host, --user, --port, --identity", "Adds a new SSH host entry."],
-          ["open-termkit ssh write-config", "--include", "Generates managed SSH config snippet."],
-          ["open-termkit tools list", "", "Lists catalog tools and their local detection status."],
-          ["open-termkit tools install <name>", "--yes", "Installs a detected catalog tool."],
-          ["open-termkit sync export", "--file", "Exports configuration bundle."],
-          ["open-termkit sync import", "--file", "Imports configuration bundle."]
+          ["open-termkit serve", "--host, --port", "Starts the web server (default 127.0.0.1:8765)."],
+          ["open-termkit setup", "", "Runs automatic tool detection and profile provisioning."],
+          ["open-termkit doctor", "", "Prints system telemetry, memory usage, and diagnostics."],
+          ["open-termkit sync export", "--file", "Exports configuration bundle to JSON."],
+          ["open-termkit sync import", "--file", "Imports configuration bundle from JSON."]
+        ]
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "2. Key REST Endpoints"
+      },
+      {
+        type: "table",
+        headers: ["Endpoint", "Method", "Description"],
+        rows: [
+          ["/api/health", "GET", "Health check returning application status."],
+          ["/api/doctor", "GET", "Detailed system telemetry and SQLite database metrics."],
+          ["/api/profiles", "GET / POST", "List or create terminal launch profiles."],
+          ["/api/ssh/test", "POST", "Probe remote host TCP reachability and latency."],
+          ["/api/ssh/generate-key", "POST", "Generate Ed25519 key pair with comment."],
+          ["/api/terminals/ws", "WebSocket", "Real-time PTY terminal stream."]
+        ]
+      }
+    ]
+  }
+];
+
+export const docsSectionsZh: DocSection[] = [
+  {
+    id: "introduction",
+    category: "快速入门",
+    title: "Open Termkit 介绍与概述",
+    navTitle: "介绍与概述",
+    summary: "Open Termkit 核心设计哲学、系统架构与功能概览。",
+    content: [
+      {
+        type: "paragraph",
+        text: "Open Termkit 是一款生产级自托管本地及 Web 终端环境，核心采用 wterm 与 Go 构建。它将本地 PTY 虚拟终端交互会话与企业级管理功能结合，深度集成终端配置、SSH 密钥与远程连接、自主 AI 编程 Agent 与 tmux 持久化工作区。"
+      },
+      {
+        type: "callout",
+        variant: "tip",
+        title: "单一二进制文件架构",
+        text: "Open Termkit 将所有后端服务、数据存储与生产级 React 前端打包编译为单个独立 Go 二进制文件，在生产运行时完全不需要依赖 Node.js 或 Python 等外部运行时环境。"
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "核心功能亮点"
+      },
+      {
+        type: "list",
+        items: [
+          "多标签终端工作区：多 PTY 会话并发运行，各会话拥有独立输出缓冲区，切换标签平滑不断连。",
+          "SSH 主机与密钥管理器：统一管理远程服务器，原生生成 Ed25519 密钥对，毫秒级网络测速，一键连接。",
+          "AI 编程助手中心：自动扫描、一键安装并快捷启动 Claude Code、Codex CLI、OpenCode 与 Pi 命令行助手。",
+          "Geist 现代极简设计：遵循精密黑白灰现代美学规范，原生支持高质感深色与浅色主题无缝切换。",
+          "离线优先与本地数据安全：所有配置本地保存在 SQLite 中；私钥文件严格限定于本地 0600 权限。",
+          "开箱即用的生产部署：附带原生 systemd 自动化脚本、Docker 镜像支持以及 WebSocket 反向代理兼容。"
+        ]
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "系统总体架构"
+      },
+      {
+        type: "code",
+        language: "text",
+        title: "系统架构示意",
+        code: `[ 浏览器前端 Web UI ] ──(WebSocket)──> /api/terminals/ws ──> creack/pty ──> 宿主 Shell (zsh/bash/tmux)
+        ├── (HTTP REST API) ──> Go Router ──> SQLite 数据库 (~/.open-termkit/open-termkit.db)
+        └── (SSH 管理器) ─────> ~/.ssh/open-termkit/config (Ed25519 密钥)`
+      }
+    ]
+  },
+  {
+    id: "quickstart",
+    category: "快速入门",
+    title: "快速入门指南",
+    navTitle: "快速入门指南",
+    summary: "两分钟内完成 Open Termkit 编译构建与启动运行。",
+    content: [
+      {
+        type: "paragraph",
+        text: "Open Termkit 支持直接从源码快速编译构建，也可以通过预编译二进制文件或 Docker 容器运行。"
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "1. 编译前置依赖"
+      },
+      {
+        type: "list",
+        items: [
+          "Go 1.22 或更高版本",
+          "Node.js 18 或更高版本（仅前端构建阶段需要）",
+          "兼容 POSIX 标准的 Shell 环境（推荐 macOS 或 Linux）"
+        ]
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "2. 源码编译与启动"
+      },
+      {
+        type: "code",
+        language: "bash",
+        title: "Terminal",
+        code: `# 克隆代码仓库
+git clone https://github.com/natelindev/open-termkit.git
+cd open-termkit
+
+# 编译前端静态资源并打包 Go 单一二进制
+make build
+
+# 启动终端服务
+./bin/open-termkit serve --port 8765`
+      },
+      {
+        type: "paragraph",
+        text: "服务启动后，在浏览器中打开 http://127.0.0.1:8765 即可立即使用。"
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "3. 一键初始化环境"
+      },
+      {
+        type: "paragraph",
+        text: "运行 CLI setup 命令以扫描当前机器上的开发工具和 AI Agent，并在本地数据库中自动写入推荐预设配置："
+      },
+      {
+        type: "code",
+        language: "bash",
+        title: "Terminal",
+        code: `./bin/open-termkit setup`
+      }
+    ]
+  },
+  {
+    id: "tutorial-multi-tab",
+    category: "详细教程",
+    title: "教程 1：多标签终端会话管理",
+    navTitle: "1. 多标签终端",
+    summary: "掌握多终端会话并行、后台任务保活与实时交互控制。",
+    content: [
+      {
+        type: "paragraph",
+        text: "Open Termkit 提供多标签终端调度引擎，可以在宿主机上同时运行多个并发 PTY 进程，同时实现零延迟标签切换且不中断连接。"
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "1. 创建与管理标签页"
+      },
+      {
+        type: "list",
+        items: [
+          "新建标签页：点击顶部标签栏中的 '+' 按钮，以默认配置启动新的 Shell 会话。",
+          "选择预设配置：点击 '+' 旁的下拉箭头，快速选择特定配置（如 Zsh、Bash、tmux 或 AI Agent）。",
+          "平滑切换标签：点击任意标签页进行切换。后台标签页完整保持其运行中的任务、终端输出缓冲区与子进程。",
+          "行内重命名：双击任意标签页标题即可直接编辑名称，按下 Enter 键保存。",
+          "关闭标签页：点击标签右侧的 '×' 按钮，正常断开 WebSocket 并安全终止对应的宿主机 PTY 进程。"
+        ]
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "2. 实时终端控制栏"
+      },
+      {
+        type: "table",
+        headers: ["控制项", "快捷键 / 操作", "功能说明"],
+        rows: [
+          ["清空屏幕", "Clear / Ctrl+L", "发送换页符转义序列以清空当前终端视口。"],
+          ["重启会话", "Restart", "安全关闭现有 WebSocket 并立即启动全新的 Shell 进程。"],
+          ["字号缩放", "A- / A+", "在 10px 至 24px 之间动态缩放终端文字大小。"],
+          ["跟随输出", "Follow: 开 / 关", "锁定或解锁随终端标准输出到达时自动滚屏到底部。"],
+          ["Zen 专注模式", "全屏切换", "将终端视图无缝扩展至整个浏览器视口。"]
+        ]
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "3. 键盘驱动：Cmd+K 命令面板"
+      },
+      {
+        type: "paragraph",
+        text: "在应用中随时按下 Cmd+K（macOS）或 Ctrl+K（Linux/Windows）即可唤出全局命令面板。通过键盘上下键和回车键，快速跳转标签页、切换视图、一键连接 SSH 主机或切换界面主题。"
+      }
+    ]
+  },
+  {
+    id: "tutorial-ssh",
+    category: "详细教程",
+    title: "教程 2：SSH 密钥管理与远程主机连接",
+    navTitle: "2. SSH 密钥与远程主机",
+    summary: "生成 Ed25519 密钥、管理远程主机、实时测试网络延迟并一键连入。",
+    content: [
+      {
+        type: "paragraph",
+        text: "Open Termkit 提供了专业级 SSH 配置管理器，在兼容标准 OpenSSH 文件的同时，提供了现代化 Web 连接体验。"
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "1. 界面内直接生成 Ed25519 密钥"
+      },
+      {
+        type: "paragraph",
+        text: "直接在界面中生成安全的 Ed25519 密钥对，无需在外部终端中繁琐操作："
+      },
+      {
+        type: "list",
+        items: [
+          "在主导航栏中进入 SSH 视图，点击“生成密钥对”。",
+          "输入密钥名称（例如 id_ed25519_prod）和备注信息。",
+          "私钥安全写入 ~/.ssh/open-termkit/ 目录，具有严格的 0600 权限。",
+          "点击公钥旁边的“复制”按钮，将其添加到目标服务器的 authorized_keys 文件中。"
+        ]
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "2. 主机管理与一键连入"
+      },
+      {
+        type: "paragraph",
+        text: "配置远程主机参数（主机名、端口、用户、密钥路径及跳板机）。每个卡片提供："
+      },
+      {
+        type: "list",
+        items: [
+          "测试：发起实时 TCP 网络连通性测试，以毫秒为单位显示 ping 延迟。",
+          "连接：自动在终端区开启新标签页并执行 'ssh <profile>' 进行交互连接。",
+          "编辑：在线更新主机参数并自动同步至本地托管配置。"
         ]
       }
     ]
   },
   {
-    id: "api-reference",
-    category: "Guides & Reference",
-    title: "REST & WebSocket API Reference",
-    summary: "Comprehensive endpoints and payload schema documentation.",
-    badge: "Reference",
+    id: "tutorial-agents",
+    category: "详细教程",
+    title: "教程 3：配置 AI 编程助手环境",
+    navTitle: "3. AI 编程助手环境",
+    summary: "在终端环境中集成 Claude Code、OpenAI Codex、OpenCode 与 Pi。",
     content: [
       {
         type: "paragraph",
-        text: "Open Termkit provides a clean JSON HTTP API and WebSocket protocol."
+        text: "Open Termkit 针对命令行 AI 编程 Agent 的开发场景进行了专属优化。"
       },
       {
         type: "heading",
         level: 2,
-        text: "HTTP Endpoints"
+        text: "1. 支持的 Agent 列表"
       },
       {
         type: "table",
-        headers: ["Method", "Path", "Description"],
+        headers: ["编程助手", "命令", "描述"],
         rows: [
-          ["GET", "/api/health", "Health check returning version and database path."],
-          ["GET", "/api/doctor", "Comprehensive system diagnostics, memory, shells, and DB stats."],
-          ["GET", "/api/settings", "Returns application paths and configuration."],
-          ["GET / POST", "/api/profiles", "List terminal profiles or create a new profile."],
-          ["GET / PUT / DELETE", "/api/profiles/{id}", "Manage individual terminal profile."],
-          ["GET / POST", "/api/ssh", "List SSH profiles or create a new host."],
-          ["GET / PUT / DELETE", "/api/ssh/{id}", "Manage individual SSH profile."],
-          ["POST", "/api/ssh/test", "Test TCP network connectivity and latency to remote host."],
-          ["POST", "/api/ssh/{id}/test", "Test connection to a saved SSH profile."],
-          ["POST", "/api/ssh/generate-key", "Generate a new Ed25519 key pair with comment."],
-          ["POST", "/api/ssh/import-key", "Upload and import a private key into ~/.ssh/open-termkit."],
-          ["POST", "/api/ssh/write-config", "Write ~/.ssh/open-termkit/config snippet."],
-          ["GET", "/api/tools", "List tool catalog with installation detection."],
-          ["POST", "/api/tools/{name}/install", "Execute package manager installer for a tool."],
-          ["GET / POST", "/api/setup/run", "Run automated system setup and preset provisioning."],
-          ["GET", "/api/sync/export", "Download sync bundle as JSON file attachment."],
-          ["POST", "/api/sync/import", "Upload and merge sync bundle JSON."]
+          ["Claude Code", "claude", "Anthropic 官方终端自主编程助手。"],
+          ["Codex CLI", "codex", "OpenAI 命令行交互式编程助手。"],
+          ["OpenCode", "opencode", "开源命令行终端 AI 编程协作套件。"],
+          ["Pi", "pi", "极简终端 AI 结对编程助手。"]
         ]
       },
       {
         type: "heading",
         level: 2,
-        text: "WebSocket Protocol (/api/terminals/ws)"
+        text: "2. 安全一键可视化安装"
       },
       {
         type: "paragraph",
-        text: "The WebSocket connection initiates a real-time PTY session. Query parameters: 'profile_id', 'cols' (default 80), 'rows' (default 24)."
+        text: "在“工具”视图中，Open Termkit 自动检测已安装的 Agent。对于未安装的工具，点击“安装”即可查看即将执行的安装命令，并在弹窗中实时查看流式安装日志。"
+      }
+    ]
+  },
+  {
+    id: "tutorial-tmux",
+    category: "详细教程",
+    title: "教程 4：使用 Tmux 保持会话常驻",
+    navTitle: "4. 持久会话 (tmux)",
+    summary: "让长时间编译、训练或部署任务在断网和关闭浏览器后持续运行。",
+    content: [
+      {
+        type: "paragraph",
+        text: "对于长时间运行的任务（如大型项目构建、测试套件运行或长时间训练），结合 tmux 使用可以确保会话永不断线。"
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "1. 内置 Tmux 预设"
+      },
+      {
+        type: "paragraph",
+        text: "Open Termkit 预置了默认 tmux 配置："
       },
       {
         type: "code",
-        language: "json",
-        title: "Client -> Server Messages",
-        code: `// Send keystroke / input data
-{ "type": "input", "data": "ls -la\\n" }
-
-// Window resize event
-{ "type": "resize", "cols": 120, "rows": 36 }
-
-// Heartbeat ping
-{ "type": "ping", "data": "1719876543210" }`
+        language: "bash",
+        title: "Tmux 命令",
+        code: "tmux new-session -A -s main"
       },
       {
-        type: "code",
-        language: "json",
-        title: "Server -> Client Messages",
-        code: `// Terminal output data
-{ "type": "output", "data": "total 48\\ndrwxr-xr-x..." }
-
-// Heartbeat pong
-{ "type": "pong", "data": "1719876543210" }
-
-// Process exit
-{ "type": "exit", "code": 0 }
-
-// Error notification
-{ "type": "error", "error": "executable file not found in $PATH" }`
+        type: "paragraph",
+        text: "'-A' 参数会在会话已存在时直接恢复接入，未创建时自动新建。即使关闭浏览器，任务仍将在宿主机上持续运行。"
+      }
+    ]
+  },
+  {
+    id: "reference-cli-api",
+    category: "参考手册",
+    title: "参考手册：CLI 命令行与 REST API",
+    navTitle: "5. CLI 与 REST API",
+    summary: "完整的命令行指令、参数与 HTTP REST 接口规范。",
+    content: [
+      {
+        type: "paragraph",
+        text: "Open Termkit 提供了完备的命令行工具链与标准 JSON REST API。"
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "1. 常用 CLI 命令"
+      },
+      {
+        type: "table",
+        headers: ["命令", "参数", "功能说明"],
+        rows: [
+          ["open-termkit serve", "--host, --port", "启动 Web 界面与 API 服务（默认 127.0.0.1:8765）。"],
+          ["open-termkit setup", "", "执行系统环境自动检测与预设配置初始化。"],
+          ["open-termkit doctor", "", "输出系统健康状态、内存指标与详细诊断信息。"],
+          ["open-termkit sync export", "--file", "将当前所有配置导出为 JSON 文件。"],
+          ["open-termkit sync import", "--file", "从 JSON 文件导入并合并配置。"]
+        ]
+      },
+      {
+        type: "heading",
+        level: 2,
+        text: "2. 核心 REST 接口"
+      },
+      {
+        type: "table",
+        headers: ["接口路径", "HTTP 方法", "接口功能"],
+        rows: [
+          ["/api/health", "GET", "健康检查接口，返回应用基本信息。"],
+          ["/api/doctor", "GET", "系统详细遥测与 SQLite 数据库运行指标。"],
+          ["/api/profiles", "GET / POST", "获取或创建终端运行配置。"],
+          ["/api/ssh/test", "POST", "远程主机 TCP 连通性与 ping 延迟探测。"],
+          ["/api/ssh/generate-key", "POST", "生成全新的 Ed25519 密钥对。"],
+          ["/api/terminals/ws", "WebSocket", "实时 PTY 终端数据流。"]
+        ]
       }
     ]
   }
 ];
+
+export const docsSections = docsSectionsEn;
+
+export function getDocsSections(locale: "en" | "zh"): DocSection[] {
+  return locale === "zh" ? docsSectionsZh : docsSectionsEn;
+}

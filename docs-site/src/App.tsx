@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { type ContentBlock, type DocPage, docPages } from "./content";
+import { type ContentBlock, type DocPage, type Locale, getDocPages } from "./content";
 import { DocSearchModal } from "./components/DocSearchModal";
 import { TableOfContents } from "./components/TableOfContents";
 import { ThemePlayground } from "./components/ThemePlayground";
 
 type Theme = "light" | "dark";
 const themeStorageKey = "open-termkit-docs-theme";
+const langStorageKey = "open-termkit-docs-lang";
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "light";
@@ -18,9 +19,21 @@ function getInitialTheme(): Theme {
   }
 }
 
+function getInitialLocale(): Locale {
+  if (typeof window === "undefined") return "en";
+  try {
+    const stored = window.localStorage.getItem(langStorageKey);
+    if (stored === "en" || stored === "zh") return stored;
+    return window.navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
+  } catch {
+    return "en";
+  }
+}
+
 export default function App() {
   const [activePageId, setActivePageId] = useState<string>("introduction");
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [locale, setLocale] = useState<Locale>(getInitialLocale);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -37,6 +50,15 @@ export default function App() {
     }
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    try {
+      window.localStorage.setItem(langStorageKey, locale);
+    } catch {
+      // ignore
+    }
+  }, [locale]);
+
   // Global Cmd+K / Ctrl+K listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,6 +71,8 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const docPages = useMemo(() => getDocPages(locale), [locale]);
+
   const categories = useMemo(() => {
     const map = new Map<string, DocPage[]>();
     for (const page of docPages) {
@@ -57,11 +81,11 @@ export default function App() {
       map.set(page.category, list);
     }
     return Array.from(map.entries());
-  }, []);
+  }, [docPages]);
 
   const activePage = useMemo(
     () => docPages.find((p) => p.id === activePageId) ?? docPages[0],
-    [activePageId]
+    [docPages, activePageId]
   );
 
   const currentIndex = docPages.findIndex((p) => p.id === activePage.id);
@@ -104,7 +128,7 @@ export default function App() {
           <a href="#" className="doc-brand" onClick={() => handleSelectPage("introduction")}>
             <span className="doc-brand-logo" aria-hidden="true" />
             <span className="doc-brand-title">open-termkit</span>
-            <span className="doc-version-pill">docs</span>
+            <span className="doc-version-pill">{locale === "zh" ? "文档" : "docs"}</span>
           </a>
         </div>
 
@@ -116,43 +140,43 @@ export default function App() {
             onClick={() => setIsSearchOpen(true)}
           >
             <span className="search-glyph">🔍</span>
-            <span>Search documentation...</span>
+            <span>{locale === "zh" ? "搜索文档与教程..." : "Search documentation..."}</span>
             <kbd className="search-kbd">⌘K</kbd>
           </button>
         </div>
 
-        {/* Quick Links & Theme Switcher */}
+        {/* Quick Links & Language / Theme Switcher */}
         <div className="nav-right">
           <button
             type="button"
             className="nav-text-link"
             onClick={() => handleSelectPage("quickstart")}
           >
-            Quickstart
+            {locale === "zh" ? "快速入门" : "Quickstart"}
           </button>
           <button
             type="button"
             className="nav-text-link"
             onClick={() => handleSelectPage("tutorial-multi-tab")}
           >
-            Tutorials
+            {locale === "zh" ? "教程" : "Tutorials"}
           </button>
           <button
             type="button"
             className="nav-text-link"
             onClick={() => handleSelectPage("api-reference")}
           >
-            API
+            {locale === "zh" ? "API 参考" : "API"}
           </button>
           <a
             href="/"
-            className="nav-text-link"
+            className="nav-text-link nav-terminal-link"
             title="Open Open Termkit Web App"
           >
-            Launch Terminal ↗
+            {locale === "zh" ? "打开终端 ↗" : "Launch Terminal ↗"}
           </a>
           <a
-            href="https://github.com/open-termkit/open-termkit"
+            href="https://github.com/natelindev/open-termkit"
             target="_blank"
             rel="noopener noreferrer"
             className="nav-icon-link"
@@ -161,6 +185,27 @@ export default function App() {
             GitHub
           </a>
 
+          {/* Language Switcher Segmented Control */}
+          <div className="doc-lang-segmented" role="radiogroup" aria-label="Language Selector">
+            <button
+              type="button"
+              className={`lang-btn ${locale === "en" ? "active" : ""}`}
+              onClick={() => setLocale("en")}
+              title="Switch to English"
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              className={`lang-btn ${locale === "zh" ? "active" : ""}`}
+              onClick={() => setLocale("zh")}
+              title="切换为简体中文"
+            >
+              中文
+            </button>
+          </div>
+
+          {/* Theme Toggle Button */}
           <button
             type="button"
             className="doc-theme-btn"
@@ -175,7 +220,7 @@ export default function App() {
 
       {/* Main 3-Column Layout */}
       <div className="doc-body-container">
-        {/* Left Sidebar Navigation */}
+        {/* Left Sidebar Navigation - NO BADGES / NO TRUNCATION */}
         <aside className={`doc-left-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
           <nav className="doc-sidebar-nav" aria-label="Documentation Categories">
             {categories.map(([category, pages]) => (
@@ -188,9 +233,9 @@ export default function App() {
                       type="button"
                       className={`doc-nav-link ${page.id === activePageId ? "active" : ""}`}
                       onClick={() => handleSelectPage(page.id)}
+                      title={page.title}
                     >
-                      <span className="link-title">{page.title}</span>
-                      {page.badge && <span className="link-badge">{page.badge}</span>}
+                      <span className="link-title">{page.navTitle || page.title}</span>
                     </button>
                   ))}
                 </div>
@@ -199,11 +244,11 @@ export default function App() {
           </nav>
         </aside>
 
-        {/* Center Main Content Article */}
+        {/* Center Main Content Article - ANIMATED FADE IN */}
         <main className="doc-main-pane">
-          <div className="doc-article-wrapper">
+          <div className="doc-article-wrapper" key={`${locale}-${activePage.id}`}>
             <div className="doc-breadcrumbs">
-              <span>Docs</span>
+              <span>{locale === "zh" ? "文档" : "Docs"}</span>
               <span className="crumb-sep">/</span>
               <span>{activePage.category}</span>
               <span className="crumb-sep">/</span>
@@ -213,7 +258,6 @@ export default function App() {
             <header className="doc-article-header">
               <div className="article-title-row">
                 <h1>{activePage.title}</h1>
-                {activePage.badge && <span className="doc-badge-pill">{activePage.badge}</span>}
               </div>
               <p className="article-summary-lead">{activePage.summary}</p>
               <div className="article-meta-row">
@@ -228,6 +272,7 @@ export default function App() {
                   block={block}
                   blockId={`${activePage.id}-${idx}`}
                   copiedId={copiedId}
+                  locale={locale}
                   onCopy={copyCode}
                 />
               ))}
@@ -241,7 +286,7 @@ export default function App() {
                   className="pagination-btn prev"
                   onClick={() => handleSelectPage(prevPage.id)}
                 >
-                  <span className="btn-dir">← Previous</span>
+                  <span className="btn-dir">{locale === "zh" ? "← 上一篇" : "← Previous"}</span>
                   <span className="btn-label">{prevPage.title}</span>
                 </button>
               ) : <div />}
@@ -252,7 +297,7 @@ export default function App() {
                   className="pagination-btn next"
                   onClick={() => handleSelectPage(nextPage.id)}
                 >
-                  <span className="btn-dir">Next →</span>
+                  <span className="btn-dir">{locale === "zh" ? "下一篇 →" : "Next →"}</span>
                   <span className="btn-label">{nextPage.title}</span>
                 </button>
               )}
@@ -261,7 +306,7 @@ export default function App() {
         </main>
 
         {/* Right Sticky Table of Contents */}
-        <TableOfContents blocks={activePage.blocks} />
+        <TableOfContents blocks={activePage.blocks} locale={locale} />
       </div>
 
       {/* Global Cmd+K Search Modal */}
@@ -269,6 +314,8 @@ export default function App() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelectPage={handleSelectPage}
+        docPages={docPages}
+        locale={locale}
       />
     </div>
   );
@@ -278,11 +325,13 @@ function RenderContentBlock({
   block,
   blockId,
   copiedId,
+  locale,
   onCopy
 }: {
   block: ContentBlock;
   blockId: string;
   copiedId: string | null;
+  locale: Locale;
   onCopy: (code: string, id: string) => void;
 }) {
   switch (block.type) {
@@ -317,11 +366,11 @@ function RenderContentBlock({
             </pre>
             <button
               type="button"
-              className="code-copy-btn"
+              className={`code-copy-btn ${copiedId === blockId ? "copied" : ""}`}
               onClick={() => onCopy(block.code, blockId)}
-              title="Copy snippet"
+              title={locale === "zh" ? "复制代码片段" : "Copy snippet"}
             >
-              <span>{copiedId === blockId ? "Copied!" : "Copy"}</span>
+              <span>{copiedId === blockId ? (locale === "zh" ? "已复制!" : "Copied!") : (locale === "zh" ? "复制" : "Copy")}</span>
             </button>
           </div>
         </div>

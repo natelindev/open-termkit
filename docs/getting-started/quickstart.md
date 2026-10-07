@@ -18,7 +18,7 @@ Once built, the resulting binary under `bin/open-termkit` is entirely standalone
 
 ```bash
 # Clone repository
-git clone https://github.com/open-termkit/open-termkit.git
+git clone https://github.com/natelindev/open-termkit.git
 cd open-termkit
 
 # Build both frontend assets and Go binary

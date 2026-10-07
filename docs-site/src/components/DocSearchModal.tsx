@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { docPages } from "../content";
+import type { DocPage, Locale } from "../content";
 
 export function DocSearchModal({
   isOpen,
   onClose,
-  onSelectPage
+  onSelectPage,
+  docPages,
+  locale = "en"
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSelectPage: (pageId: string) => void;
+  docPages: DocPage[];
+  locale?: Locale;
 }) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -28,7 +32,7 @@ export function DocSearchModal({
             ("code" in b && b.code.toLowerCase().includes(q))
         )
     );
-  }, [query]);
+  }, [query, docPages]);
 
   useEffect(() => {
     if (isOpen) {
@@ -65,7 +69,7 @@ export function DocSearchModal({
   if (!isOpen) return null;
 
   return (
-    <div className="doc-search-backdrop" onClick={onClose} role="presentation">
+    <div className="doc-search-backdrop" onClick={onClose}>
       <div
         className="doc-search-modal"
         onClick={(e) => e.stopPropagation()}
@@ -79,7 +83,7 @@ export function DocSearchModal({
             ref={inputRef}
             type="search"
             className="doc-search-input-field"
-            placeholder="Search guides, tutorials, CLI commands, API..."
+            placeholder={locale === "zh" ? "搜索文档、教程、CLI 命令、API..." : "Search guides, tutorials, CLI commands, API..."}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -90,7 +94,7 @@ export function DocSearchModal({
         <div className="doc-search-list">
           {results.length === 0 ? (
             <div className="doc-search-empty">
-              No documentation pages found for "{query}".
+              {locale === "zh" ? `未找到关于 "${query}" 的文档内容。` : `No documentation pages found for "${query}".`}
             </div>
           ) : (
             results.map((page, idx) => (
@@ -108,16 +112,15 @@ export function DocSearchModal({
                   <strong className="doc-search-item-title">{page.title}</strong>
                   <span className="doc-search-item-summary">{page.summary}</span>
                 </div>
-                {page.badge && <span className="doc-search-item-badge">{page.badge}</span>}
               </div>
             ))
           )}
         </div>
 
         <div className="doc-search-footer">
-          <span>↑↓ Navigate</span>
-          <span>↵ Open article</span>
-          <span>ESC Close</span>
+          <span>{locale === "zh" ? "↑↓ 导航" : "↑↓ Navigate"}</span>
+          <span>{locale === "zh" ? "↵ 打开文档" : "↵ Open article"}</span>
+          <span>{locale === "zh" ? "ESC 关闭" : "ESC Close"}</span>
         </div>
       </div>
     </div>

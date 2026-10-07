@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ContentBlock } from "../content";
 
-export function TableOfContents({ blocks }: { blocks: ContentBlock[] }) {
+export function TableOfContents({ blocks, locale = "en" }: { blocks: ContentBlock[]; locale?: "en" | "zh" }) {
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
 
   const headings = blocks.filter(
@@ -27,7 +27,7 @@ export function TableOfContents({ blocks }: { blocks: ContentBlock[] }) {
   return (
     <aside className="toc-sidebar" aria-label="Table of Contents">
       <div className="toc-container">
-        <span className="toc-title">On this page</span>
+        <span className="toc-title">{locale === "zh" ? "本页目录" : "On this page"}</span>
         <nav className="toc-nav">
           {headings.map((h) => (
             <button

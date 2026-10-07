@@ -63,7 +63,7 @@ Prerequisites: Go 1.22+ and Node.js 18+ (only for the build step).
 
 ```bash
 # Clone the repository
-git clone https://github.com/open-termkit/open-termkit.git
+git clone https://github.com/natelindev/open-termkit.git
 cd open-termkit
 
 # Build frontend and binary

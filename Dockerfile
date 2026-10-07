@@ -22,7 +22,7 @@ FROM debian:${DEBIAN_VERSION} AS runtime
 
 LABEL org.opencontainers.image.title="open-termkit" \
       org.opencontainers.image.description="Local terminal environment with a Go API and embedded React web UI" \
-      org.opencontainers.image.source="https://github.com/open-termkit/open-termkit"
+      org.opencontainers.image.source="https://github.com/natelindev/open-termkit"
 
 RUN set -eux; \
     apt-get -o Acquire::Retries=5 update; \
