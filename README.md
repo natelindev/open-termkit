@@ -1,9 +1,6 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/wordmark-dark.png">
-    <img src="docs/assets/brand/wordmark.png" width="420" alt="Open Termkit">
-  </picture>
-</p>
+# Open Termkit
+
+<p align="center"><img src="docs/images/open-termkit-logo.png" width="96" alt="Open Termkit logo"></p>
 
 <p align="center">Your shells, SSH hosts, and coding agents. One workspace.</p>
 

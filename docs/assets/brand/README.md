@@ -1,5 +1,3 @@
 # Open Termkit identity
 
-An open triangular prompt assembled from three terminal planes.
-
-SVG marks use paths and scale without a font dependency. PNG exports have transparent backgrounds. Use `mark-dark` on dark surfaces and `mark-mono` for one-color reproduction. Preserve the 64-unit square and keep at least 8 units of clear space. Wordmark SVGs use Arial/system sans text; PNG wordmarks are fixed exports. The favicon adapts to the system color scheme. Assets are covered by the repository license.
+Keep the original Open Termkit logo. The canonical PNG is [docs/images/open-termkit-logo.png](../../images/open-termkit-logo.png), with identical copies in the app and documentation public directories. UI headers use its silhouette as a CSS mask so it remains visible in both light and dark themes. The existing PNG favicon is preserved. Assets are covered by the repository license.
