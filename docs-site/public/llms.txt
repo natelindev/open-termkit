@@ -1,0 +1,45 @@
+# Open Termkit
+
+> Self-hosted terminal environment built with Go, React, wterm, and SQLite. Your shells, SSH hosts, and coding agents in one workspace.
+
+## Overview
+
+Open Termkit is an open-source, self-hosted web terminal and workspace manager designed for local shells, remote SSH connections, and background AI coding agents.
+
+- **Website**: https://open-termkit-cif.pages.dev/
+- **Repository**: https://github.com/natelindev/open-termkit
+- **License**: MIT
+- **Tech Stack**: Go 1.26+, React 19, TypeScript, Vite, wterm canvas terminal, SQLite
+
+## Architecture
+
+1. **PTY & Host Execution**: Go backend directly manages pseudo-terminals (`creack/pty`) with full window resize, signal handling, and environment isolation.
+2. **Multiplexing over WebSockets**: Stream multiple terminal sessions concurrently through binary WebSockets with message framing.
+3. **Canvas Terminal (wterm)**: High-performance canvas-based rendering with custom font metrics, box drawing, and color themes.
+4. **Session Persistence**: Sessions and scrollback history persist across browser tabs and page reloads via SQLite storage.
+5. **Coding Agent Workspaces**: Direct integration with terminal-based coding agents (Codex, Claude Code, Aider, Hermes).
+
+## Quickstart & Installation
+
+```bash
+# Build from source
+git clone https://github.com/natelindev/open-termkit.git
+cd open-termkit
+make build
+
+# Start local server
+./bin/open-termkit serve --port 8765
+
+# Or run via Docker
+docker run -p 8765:8765 natelindev/open-termkit:latest
+```
+
+Open `http://localhost:8765` in your browser.
+
+## CLI Reference
+
+- `serve`: Start the Open Termkit web terminal server.
+  - `--port <number>`: Port to bind (default: `8765`).
+  - `--host <string>`: Host interface to bind (default: `127.0.0.1`).
+  - `--data-dir <path>`: Directory for SQLite database and state.
+- `version`: Print version information.
