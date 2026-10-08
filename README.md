@@ -5,7 +5,7 @@
 <p align="center">Your shells, SSH hosts, and coding agents. One workspace.</p>
 
 [![CI](https://github.com/natelindev/open-termkit/actions/workflows/ci.yml/badge.svg)](https://github.com/natelindev/open-termkit/actions/workflows/ci.yml)
-[Documentation](https://natelindev-open-termkit.pages.dev/) · [Tutorials](docs/README.md) · [Contributing](CONTRIBUTING.md) · [Report a bug](https://github.com/natelindev/open-termkit/issues/new/choose)
+[Documentation](https://open-termkit-cif.pages.dev/) · [Tutorials](docs/README.md) · [Contributing](CONTRIBUTING.md) · [Report a bug](https://github.com/natelindev/open-termkit/issues/new/choose)
 
 Open Termkit is a self-hosted browser workspace for real terminals. A Go server allocates host PTYs, serves an embedded React application, and stores launch profiles in SQLite. Switch between local shells, SSH hosts, and coding-agent profiles without leaving the workspace.
 
@@ -79,7 +79,7 @@ go vet ./...
 make build
 ```
 
-The documentation source is `docs-site/`; `make frontend` embeds its build beneath the application's `/docs`. The public [Cloudflare site](https://natelindev-open-termkit.pages.dev/) serves documentation only. The PTY backend runs on your own host.
+The documentation source is `docs-site/`; `make frontend` embeds its build beneath the application's `/docs`. The public [Cloudflare site](https://open-termkit-cif.pages.dev/) serves documentation only. The PTY backend runs on your own host.
 
 ## Deployment
 
