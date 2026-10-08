@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       SSH_HOST: ${{ inputs.ssh_host }}
       SSH_USER: ${{ inputs.ssh_user }}
